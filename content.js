@@ -37,7 +37,7 @@ function getOrgUnitId() {
 }
 
 // --- 2. GLOBAL STORAGE HELPERS ---
-let currentSessionPDFs = []; // PDFs found in the current course tab
+let currentSessionPDFs = []; 
 
 async function updateMasterCount() {
     const data = await chrome.storage.local.get("masterList");
@@ -58,11 +58,19 @@ function buildDashboard() {
             font-family: 'Segoe UI', Arial, sans-serif; box-shadow: 0px 8px 30px rgba(0,0,0,0.3);
         }
         .mcgill-btn { background: #ed1b2e; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 6px; margin-top: 8px; font-size: 11px; }
+        .mcgill-btn:hover { background: #b11221; }
         .btn-append { background: #ffaa00; display: none; }
         .btn-gumloop { background: #6200ea; margin-top: 15px; }
         .btn-clear { background: #f4f4f4; color: #666; font-size: 9px; margin-top: 5px; }
         .status-bar { font-size: 12px; color: #ed1b2e; font-weight: bold; margin-bottom: 5px; }
-        .event-preview-item { border-bottom: 1px solid #eee; padding: 6px 0; font-size: 11px; }
+        .event-preview-item { 
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #eee; padding: 6px 0; font-size: 11px; 
+        }
+        .remove-file { 
+            color: #ed1b2e; cursor: pointer; font-weight: bold; padding: 0 5px; font-size: 14px;
+        }
+        .remove-file:hover { color: black; }
         .loader { border: 2px solid #f3f3f3; border-top: 2px solid #ed1b2e; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     `;
@@ -72,16 +80,16 @@ function buildDashboard() {
     tool.id = 'mcgill-calendar-tool';
     tool.innerHTML = `
         <div style="font-weight:bold; color:#ed1b2e; border-bottom: 2px solid #ed1b2e; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between;">
-            <span>McGill Study Porter</span>
+            <span>McGill Study Porter V4.1</span>
             <span style="cursor:pointer" id="close-mcgill">✕</span>
         </div>
         <div class="status-bar" id="master-count">Master List: 0 files</div>
         <div id="scan-status" style="font-size:11px; color:#666;">Scan a course to begin...</div>
         
-        <div id="event-preview-list" style="max-height: 150px; overflow-y: auto; margin-top:10px; border: 1px solid #eee; padding: 5px;"></div>
+        <div id="event-preview-list" style="max-height: 180px; overflow-y: auto; margin-top:10px; border: 1px solid #eee; padding: 5px;"></div>
         
         <button class="mcgill-btn" style="background:#333;" id="btn-crawl-pdfs">🤖 1. CRAWL CURRENT COURSE</button>
-        <button class="mcgill-btn btn-append" id="btn-append-list">➕ 2. APPEND TO MASTER LIST</button>
+        <button class="mcgill-btn btn-append" id="btn-append-list">➕ 2. APPEND REMAINING TO MASTER</button>
         
         <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
         
@@ -99,7 +107,42 @@ function buildDashboard() {
     document.getElementById('btn-clear-master').onclick = clearMaster;
 }
 
-// --- 4. CRAWLER & TEXT EXTRACTION ---
+// --- 4. RENDER PREVIEW LOGIC ---
+function renderPreviewList() {
+    const listUI = document.getElementById('event-preview-list');
+    const appendBtn = document.getElementById('btn-append-list');
+    listUI.innerHTML = "";
+
+    if (currentSessionPDFs.length === 0) {
+        listUI.innerHTML = "<div style='color:gray; font-size:10px;'>No new files in queue.</div>";
+        appendBtn.style.display = "none";
+        return;
+    }
+
+    currentSessionPDFs.forEach((file, index) => {
+        const div = document.createElement('div');
+        div.className = 'event-preview-item';
+        div.innerHTML = `
+            <span title="${file.url}">📄 ${file.title.substring(0, 35)}${file.title.length > 35 ? '...' : ''}</span>
+            <span class="remove-file" data-index="${index}">✕</span>
+        `;
+        listUI.appendChild(div);
+    });
+
+    // Attach click events to the X buttons
+    document.querySelectorAll('.remove-file').forEach(btn => {
+        btn.onclick = function() {
+            const idx = parseInt(this.getAttribute('data-index'));
+            currentSessionPDFs.splice(idx, 1); // Remove from array
+            renderPreviewList(); // Refresh UI
+            document.getElementById('scan-status').innerText = `Removed. ${currentSessionPDFs.length} remaining.`;
+        };
+    });
+
+    appendBtn.style.display = "block";
+}
+
+// --- 5. CRAWLER & TEXT EXTRACTION ---
 async function extractTextFromPDF(url) {
     try {
         const response = await fetch(url);
@@ -117,14 +160,11 @@ async function extractTextFromPDF(url) {
 
 async function crawlAllCategories() {
     const status = document.getElementById('scan-status');
-    const listUI = document.getElementById('event-preview-list');
-    const appendBtn = document.getElementById('btn-append-list');
     const orgUnitId = getOrgUnitId();
 
     if (!orgUnitId) { status.innerText = "Navigate to a course!"; return; }
     
-    status.innerHTML = `<div class="loader"></div> Reading API...`;
-    listUI.innerHTML = "";
+    status.innerHTML = `<div class="loader"></div> Querying McGill API...`;
     currentSessionPDFs = [];
 
     try {
@@ -146,7 +186,7 @@ async function crawlAllCategories() {
 
         if (files.length > 0) {
             for (let i = 0; i < files.length; i++) {
-                status.innerHTML = `<div class="loader"></div> Extraction: ${i+1}/${files.length}`;
+                status.innerHTML = `<div class="loader"></div> Parsing: ${i+1}/${files.length}`;
                 const text = await extractTextFromPDF(files[i].url);
                 currentSessionPDFs.push({ 
                     course: document.title.split(' - ')[0],
@@ -154,20 +194,18 @@ async function crawlAllCategories() {
                     url: files[i].url, 
                     content: text 
                 });
-                listUI.innerHTML += `<div class="event-preview-item">✓ ${files[i].title}</div>`;
+                renderPreviewList();
             }
-            status.innerText = `Found ${currentSessionPDFs.length} new files. Click Append!`;
-            appendBtn.style.display = "block";
+            status.innerText = `Scan complete. Review the list and Append!`;
         } else { status.innerText = "No PDFs found."; }
     } catch (e) { status.innerText = "Crawl failed."; }
 }
 
-// --- 5. STORAGE LOGIC ---
+// --- 6. STORAGE LOGIC ---
 async function appendToMaster() {
     const data = await chrome.storage.local.get("masterList");
     let masterList = data.masterList || [];
     
-    // Combine current course PDFs with the master list, preventing duplicates by URL
     const combined = [...masterList];
     currentSessionPDFs.forEach(newFile => {
         if (!combined.some(oldFile => oldFile.url === newFile.url)) {
@@ -176,8 +214,9 @@ async function appendToMaster() {
     });
 
     await chrome.storage.local.set({ "masterList": combined });
-    document.getElementById('btn-append-list').style.display = "none";
-    document.getElementById('scan-status').innerText = "Added to Master List!";
+    currentSessionPDFs = []; // Clear session
+    renderPreviewList();
+    document.getElementById('scan-status').innerText = "Saved to Master List!";
     updateMasterCount();
 }
 
@@ -185,11 +224,11 @@ async function clearMaster() {
     if (confirm("Clear all accumulated course data?")) {
         await chrome.storage.local.remove("masterList");
         updateMasterCount();
-        document.getElementById('event-preview-list').innerHTML = "";
+        renderPreviewList();
     }
 }
 
-// --- 6. EXPORTERS ---
+// --- 7. EXPORTERS ---
 async function downloadMasterList() {
     const data = await chrome.storage.local.get("masterList");
     const list = data.masterList || [];
@@ -212,9 +251,8 @@ async function sendToGumloop() {
 
     if (list.length === 0) return alert("List is empty!");
 
-    status.innerHTML = `<div class="loader"></div> Sending ${list.length} files to Gumloop...`;
+    status.innerHTML = `<div class="loader"></div> Sending to Gumloop...`;
 
-    // Sending first 100,000 characters to prevent 500 error if list is massive
     const fullText = list.map(p => `[${p.course}] ${p.title}: ${p.content}`).join("\n\n");
     
     const payload = {
@@ -223,7 +261,7 @@ async function sendToGumloop() {
         pipeline_inputs: [
             {
                 input_name: "lecture_data",
-                value: fullText.substring(0, 150000) // Gumloop has limits, adjust as needed
+                value: fullText.substring(0, 180000) 
             }
         ]
     };
