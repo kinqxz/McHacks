@@ -1,26 +1,31 @@
-// --- 0. GATEKEEPER: Only build UI in the main window ---
+// --- GUMLOOP CONFIG ---
+const GUMLOOP_API_KEY = "5c2d7adeeb5d4f08b697fd36638ebbda";
+const GUMLOOP_USER_ID = "f3LAKxUglWel0Pg6grvwGUX8vVh2";
+const GUMLOOP_FLOW_ID = "mSrGfoUjm9xcQGopybHg9h";
+
+// --- 0. GATEKEEPER ---
 if (window.self === window.top) {
     initUI();
+    if (window.pdfjsLib) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL("pdf.worker.min.js");
+    }
 }
 
 function initUI() {
-    // Wait for page to be ready
     const checkBody = setInterval(() => {
         if (document.body) {
             clearInterval(checkBody);
             buildDashboard();
+            updateMasterCount();
         }
     }, 100);
 }
 
-// --- 1. SMART ID FINDER ---
 function getOrgUnitId() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("ou")) return urlParams.get("ou");
-
     const pathMatch = window.location.pathname.match(/\/(?:home|lessons|content|grades|calendar)\/(\d+)/);
     if (pathMatch) return pathMatch[1];
-
     const globalContext = document.documentElement.getAttribute('data-global-context');
     if (globalContext) {
         try {
@@ -31,7 +36,16 @@ function getOrgUnitId() {
     return null;
 }
 
-// --- 2. UI BUILDER ---
+// --- 2. GLOBAL STORAGE HELPERS ---
+let currentSessionPDFs = []; // PDFs found in the current course tab
+
+async function updateMasterCount() {
+    const data = await chrome.storage.local.get("masterList");
+    const count = data.masterList ? data.masterList.length : 0;
+    document.getElementById('master-count').innerText = `Master List: ${count} files`;
+}
+
+// --- 3. UI BUILDER ---
 function buildDashboard() {
     if (document.getElementById('mcgill-calendar-tool')) return;
 
@@ -43,12 +57,13 @@ function buildDashboard() {
             border-radius: 12px; padding: 15px; z-index: 2147483647;
             font-family: 'Segoe UI', Arial, sans-serif; box-shadow: 0px 8px 30px rgba(0,0,0,0.3);
         }
-        .mcgill-btn { background: #ed1b2e; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 6px; margin-top: 10px; }
-        .mcgill-btn:hover { background: #b11221; }
-        .btn-crawler { background: #333; }
-        .event-preview-item { border-bottom: 1px solid #eee; padding: 8px 0; font-size: 12px; word-break: break-word; }
-        .event-date-badge { background: #fdf2f2; color: #ed1b2e; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; margin-right: 5px; }
-        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #ed1b2e; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px;}
+        .mcgill-btn { background: #ed1b2e; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 6px; margin-top: 8px; font-size: 11px; }
+        .btn-append { background: #ffaa00; display: none; }
+        .btn-gumloop { background: #6200ea; margin-top: 15px; }
+        .btn-clear { background: #f4f4f4; color: #666; font-size: 9px; margin-top: 5px; }
+        .status-bar { font-size: 12px; color: #ed1b2e; font-weight: bold; margin-bottom: 5px; }
+        .event-preview-item { border-bottom: 1px solid #eee; padding: 6px 0; font-size: 11px; }
+        .loader { border: 2px solid #f3f3f3; border-top: 2px solid #ed1b2e; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     `;
     document.head.appendChild(style);
@@ -56,124 +71,175 @@ function buildDashboard() {
     const tool = document.createElement('div');
     tool.id = 'mcgill-calendar-tool';
     tool.innerHTML = `
-        <div style="font-weight:bold; color:#ed1b2e; border-bottom: 2px solid #ed1b2e; padding-bottom:8px; margin-bottom:10px; display:flex; justify-content:space-between;">
-            <span>McGill Pro Tool</span>
+        <div style="font-weight:bold; color:#ed1b2e; border-bottom: 2px solid #ed1b2e; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between;">
+            <span>McGill Study Porter</span>
             <span style="cursor:pointer" id="close-mcgill">✕</span>
         </div>
-        <div id="scan-status" style="font-size:12px; color:#666;">Ready...</div>
-        <div id="event-preview-list" style="max-height: 250px; overflow-y: auto; margin-top:10px;"></div>
-        <button class="mcgill-btn" id="btn-scan-events">📅 SCAN UPCOMING EVENTS</button>
-        <button class="mcgill-btn btn-crawler" id="btn-crawl-pdfs">🤖 CRAWL ALL PDFs (API)</button>
-        <button class="mcgill-btn" id="btn-ics" style="display:none; background:#ed1b2e;">📥 DOWNLOAD .ICS</button>
+        <div class="status-bar" id="master-count">Master List: 0 files</div>
+        <div id="scan-status" style="font-size:11px; color:#666;">Scan a course to begin...</div>
+        
+        <div id="event-preview-list" style="max-height: 150px; overflow-y: auto; margin-top:10px; border: 1px solid #eee; padding: 5px;"></div>
+        
+        <button class="mcgill-btn" style="background:#333;" id="btn-crawl-pdfs">🤖 1. CRAWL CURRENT COURSE</button>
+        <button class="mcgill-btn btn-append" id="btn-append-list">➕ 2. APPEND TO MASTER LIST</button>
+        
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+        
+        <button class="mcgill-btn" style="background:#28a745;" id="btn-download-master">💾 DOWNLOAD MASTER TXT</button>
+        <button class="mcgill-btn btn-gumloop" id="btn-send-gumloop">🚀 SEND MASTER TO GUMLOOP</button>
+        <button class="mcgill-btn btn-clear" id="btn-clear-master">🗑️ WIPE MASTER LIST</button>
     `;
     document.body.appendChild(tool);
 
     document.getElementById('close-mcgill').onclick = () => tool.remove();
-    document.getElementById('btn-scan-events').onclick = scanEvents;
     document.getElementById('btn-crawl-pdfs').onclick = crawlAllCategories;
-    document.getElementById('btn-ics').onclick = downloadICS;
-
-    const id = getOrgUnitId();
-    if (id) document.getElementById('scan-status').innerText = "Course Detected (ID: " + id + ")";
+    document.getElementById('btn-append-list').onclick = appendToMaster;
+    document.getElementById('btn-download-master').onclick = downloadMasterList;
+    document.getElementById('btn-send-gumloop').onclick = sendToGumloop;
+    document.getElementById('btn-clear-master').onclick = clearMaster;
 }
 
-// --- 3. EVENT SCANNER (For Assignments) ---
-let assignments = [];
-function scanEvents() {
-    assignments = [];
-    const listUI = document.getElementById('event-preview-list');
-    listUI.innerHTML = "";
-    const monthMap = { "JAN": 0, "FEB": 1, "MAR": 2, "APR": 3, "MAY": 4, "JUN": 5, "JUL": 6, "AUG": 7, "SEP": 8, "OCT": 9, "NOV": 10, "DEC": 11 };
-
-    const findInDoc = (doc) => {
-        doc.querySelectorAll('.d2l-datalist-item-content').forEach(item => {
-            const textBlocks = item.querySelectorAll('.d2l-textblock');
-            if (textBlocks.length >= 3) {
-                const monthText = textBlocks[0].innerText.trim().toUpperCase();
-                const dayText = textBlocks[1].innerText.trim();
-                const title = item.getAttribute('title')?.replace('View Event - ', '') || textBlocks[textBlocks.length - 1].innerText;
-                if (monthMap.hasOwnProperty(monthText)) {
-                    assignments.push({ title, month: monthMap[monthText], day: parseInt(dayText) });
-                    listUI.innerHTML += `<div class="event-preview-item"><span class="event-date-badge">${monthText} ${dayText}</span> ${title}</div>`;
-                }
-            }
-        });
-    };
-
-    findInDoc(document);
-    document.querySelectorAll('iframe').forEach(f => { try { findInDoc(f.contentDocument || f.contentWindow.document); } catch (e) {} });
-
-    document.getElementById('scan-status').innerText = assignments.length > 0 ? `Found ${assignments.length} assignments.` : "No events found.";
-    if (assignments.length > 0) document.getElementById('btn-ics').style.display = "block";
+// --- 4. CRAWLER & TEXT EXTRACTION ---
+async function extractTextFromPDF(url) {
+    try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            fullText += content.items.map(item => item.str).join(" ") + " ";
+        }
+        return fullText;
+    } catch (e) { return "Error parsing PDF text."; }
 }
 
-// --- 4. API-BASED PDF CRAWLER ---
 async function crawlAllCategories() {
     const status = document.getElementById('scan-status');
     const listUI = document.getElementById('event-preview-list');
+    const appendBtn = document.getElementById('btn-append-list');
     const orgUnitId = getOrgUnitId();
 
-    if (!orgUnitId) { status.innerText = "Error: Navigate to a course first!"; return; }
-
-    status.innerHTML = `<div class="loader"></div> Querying McGill API...`;
-    listUI.innerHTML = "";
-
-    // Target API endpoint
-    const apiUrl = `https://mycourses2.mcgill.ca/d2l/api/le/1.45/${orgUnitId}/content/toc`;
+    if (!orgUnitId) { status.innerText = "Navigate to a course!"; return; }
     
-    // PRINT TO CONSOLE: The API URL being fetched
-    console.log("FETCHING FROM API URL:", apiUrl);
+    status.innerHTML = `<div class="loader"></div> Reading API...`;
+    listUI.innerHTML = "";
+    currentSessionPDFs = [];
 
     try {
+        const apiUrl = `https://mycourses2.mcgill.ca/d2l/api/le/1.45/${orgUnitId}/content/toc`;
         const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error();
         const data = await response.json();
         
-        let pdfs = [];
-        const processModules = (modules) => {
-            modules.forEach(mod => {
-                if (mod.Topics) {
-                    mod.Topics.forEach(t => {
-                        if (t.Url && t.Url.toLowerCase().includes('.pdf')) {
-                            const fullPdfUrl = `https://mycourses2.mcgill.ca${t.Url}`;
-                            
-                            // PRINT TO CONSOLE: Each individual PDF URL found
-                            console.log("FOUND PDF URL:", fullPdfUrl);
-                            
-                            pdfs.push({ title: t.Title, url: fullPdfUrl });
-                        }
-                    });
-                }
-                if (mod.Modules) processModules(mod.Modules);
+        let files = [];
+        const process = (mods) => {
+            mods.forEach(m => {
+                if (m.Topics) m.Topics.forEach(t => {
+                    if (t.Url && t.Url.toLowerCase().includes('.pdf')) 
+                        files.push({ title: t.Title, url: `https://mycourses2.mcgill.ca${t.Url}` });
+                });
+                if (m.Modules) process(m.Modules);
             });
         };
+        process(data.Modules);
 
-        processModules(data.Modules);
+        if (files.length > 0) {
+            for (let i = 0; i < files.length; i++) {
+                status.innerHTML = `<div class="loader"></div> Extraction: ${i+1}/${files.length}`;
+                const text = await extractTextFromPDF(files[i].url);
+                currentSessionPDFs.push({ 
+                    course: document.title.split(' - ')[0],
+                    title: files[i].title, 
+                    url: files[i].url, 
+                    content: text 
+                });
+                listUI.innerHTML += `<div class="event-preview-item">✓ ${files[i].title}</div>`;
+            }
+            status.innerText = `Found ${currentSessionPDFs.length} new files. Click Append!`;
+            appendBtn.style.display = "block";
+        } else { status.innerText = "No PDFs found."; }
+    } catch (e) { status.innerText = "Crawl failed."; }
+}
 
-        if (pdfs.length > 0) {
-            status.innerText = `Success! Found ${pdfs.length} files.`;
-            pdfs.forEach(p => {
-                listUI.innerHTML += `<div class="event-preview-item">📄 <a href="${p.url}" target="_blank" style="color:#ed1b2e; font-weight:bold; text-decoration:none;">${p.title}</a></div>`;
-            });
-        } else {
-            status.innerText = "No PDFs found in the API response.";
+// --- 5. STORAGE LOGIC ---
+async function appendToMaster() {
+    const data = await chrome.storage.local.get("masterList");
+    let masterList = data.masterList || [];
+    
+    // Combine current course PDFs with the master list, preventing duplicates by URL
+    const combined = [...masterList];
+    currentSessionPDFs.forEach(newFile => {
+        if (!combined.some(oldFile => oldFile.url === newFile.url)) {
+            combined.push(newFile);
         }
-    } catch (e) {
-        status.innerText = "API access blocked. Click 'Content' tab once then retry.";
+    });
+
+    await chrome.storage.local.set({ "masterList": combined });
+    document.getElementById('btn-append-list').style.display = "none";
+    document.getElementById('scan-status').innerText = "Added to Master List!";
+    updateMasterCount();
+}
+
+async function clearMaster() {
+    if (confirm("Clear all accumulated course data?")) {
+        await chrome.storage.local.remove("masterList");
+        updateMasterCount();
+        document.getElementById('event-preview-list').innerHTML = "";
     }
 }
 
-// --- 5. CALENDAR GENERATOR ---
-function downloadICS() {
-    let ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//McGill Tool//EN"];
-    assignments.forEach(asm => {
-        const d = new Date(new Date().getFullYear(), asm.month, asm.day, 23, 59);
-        const ds = d.toISOString().replace(/[-:]/g, '').split('.')[0].slice(0, 8);
-        ics.push("BEGIN:VEVENT", `DTSTART:${ds}T235900`, `SUMMARY:${asm.title}`, "END:VEVENT");
+// --- 6. EXPORTERS ---
+async function downloadMasterList() {
+    const data = await chrome.storage.local.get("masterList");
+    const list = data.masterList || [];
+    if (list.length === 0) return alert("List is empty!");
+
+    let output = "MCGILL MULTI-COURSE STUDY PACK\n\n";
+    list.forEach(p => {
+        output += `COURSE: ${p.course}\nTITLE: ${p.title}\nCONTENT:\n${p.content}\n-----------------------------------\n\n`;
     });
-    ics.push("END:VCALENDAR");
-    const blob = new Blob([ics.join("\r\n")], { type: 'text/calendar' });
+    const blob = new Blob([output], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url; link.download = "McGill_Schedule.ics"; link.click();
+    link.href = url; link.download = "McGill_Master_Study_Notes.txt"; link.click();
+}
+
+async function sendToGumloop() {
+    const status = document.getElementById('scan-status');
+    const data = await chrome.storage.local.get("masterList");
+    const list = data.masterList || [];
+
+    if (list.length === 0) return alert("List is empty!");
+
+    status.innerHTML = `<div class="loader"></div> Sending ${list.length} files to Gumloop...`;
+
+    // Sending first 100,000 characters to prevent 500 error if list is massive
+    const fullText = list.map(p => `[${p.course}] ${p.title}: ${p.content}`).join("\n\n");
+    
+    const payload = {
+        user_id: GUMLOOP_USER_ID,
+        saved_item_id: GUMLOOP_FLOW_ID,
+        pipeline_inputs: [
+            {
+                input_name: "lecture_data",
+                value: fullText.substring(0, 150000) // Gumloop has limits, adjust as needed
+            }
+        ]
+    };
+
+    try {
+        const response = await fetch("https://api.gumloop.com/api/v1/start_pipeline", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${GUMLOOP_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (response.ok) {
+            status.innerText = "✅ Sent to Gumloop!";
+            window.open(result.url, '_blank');
+        } else {
+            status.innerText = "❌ Gumloop Error.";
+        }
+    } catch (e) { status.innerText = "❌ Network Error."; }
 }
