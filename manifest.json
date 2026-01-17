@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "McGill Assignment Grabber",
+  "version": "1.3",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["https://mycourses2.mcgill.ca/*"],
+      "js": ["content.js"],
+      "all_frames": true
+    }
+  ]
+}
