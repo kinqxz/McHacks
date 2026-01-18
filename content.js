@@ -51,7 +51,8 @@ function buildDashboard() {
         .insight-card { background: #fff5f5; border-left: 4px solid #c20013; padding: 8px; font-size: 11px; margin-top: 10px; border-radius: 4px; color: #444; }
         .calc-table { width: 100%; font-size: 10px; margin-top: 10px; border-collapse: collapse; }
         .calc-table td, .calc-table th { border: 1px solid #eee; padding: 4px; text-align: left; }
-        .calc-input { width: 40px; border: 1px solid #ccc; font-size: 10px; }
+        .calc-input { width: 40px; border: 1px solid #ccc; border-radius: 4px; padding: 4px; text-align: center; font-size: 10px; outline: none; }
+        .calc-input:focus { border-color: #ed1b2e; }
         .loader { border: 2px solid #f3f3f3; border-top: 2px solid #c20013; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     `;
