@@ -39,7 +39,7 @@ async function updateMasterCount() {
     const data = await chrome.storage.local.get("masterList");
     const count = (data && data.masterList) ? data.masterList.length : 0;
     const el = document.getElementById('master-count');
-    if (el) el.innerText = `Master List: ${count} items saved`;
+    if (el) el.innerText = `Event List: ${count} items saved`;
 }
 
 function buildDashboard() {
@@ -97,10 +97,10 @@ function buildDashboard() {
         
         .controls-row { display: flex; gap: 5px; margin-top: 12px; align-items: center; }
 
-        .time-select { width: 100%; padding: 10px 25px 10px 10px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; font-size: 9px; font-weight: bold; text-transform: uppercase; color: #999; background-color: #fff; outline: none; cursor: pointer; text-align: center; text-align-last: center; transition: 0.2s; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23999999%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2082.2c3.6-3.6%205.4-7.8%205.4-12.8%200-5-1.8-9.3-5.4-12.9z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 10px center; background-size: 8px; }
+        .time-select { width: 100%; padding: 10px 25px 10px 10px; border: 1px solid #ccc; border-radius: 6px; width: 100%; font-family: inherit; font-size: 9px; font-weight: bold; text-transform: uppercase; color: #999; background-color: #fff; outline: none; cursor: pointer; text-align: center; text-align-last: center; transition: 0.2s; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23999999%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2082.2c3.6-3.6%205.4-7.8%205.4-12.8%200-5-1.8-9.3-5.4-12.9z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 10px center; background-size: 8px; }
         .time-select:hover { border-color: #c20013; color: #c20013; }
 
-        #btn-wipe { margin-top: 0 !important; background: #fff; color: #999; border: 1px solid #ccc; font-size: 9px; }
+        #btn-wipe { margin-top: 0 !important; background: #fff; color: #999; max-width: 153px; border: 1px solid #ccc; font-size: 9px; }
         #btn-wipe:hover { border-color: #c20013; color: #c20013; }
 
         #btn-generate { background: linear-gradient(45deg, #c20013 0%, #ff4d4d 100%); color: white; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: 700; border-radius: 6px; margin-top: 15px; font-size: 13px; text-transform: none; letter-spacing: 0.3px; box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; animation: pulse-glow 2.5s infinite ease-in-out; }
@@ -140,8 +140,8 @@ function buildDashboard() {
                 <span style="cursor:pointer; font-weight:bold; color:#c20013;" id="close-buster">✕</span>
             </div>
             
-            <div id="master-count" style="font-weight:bold; font-size:12px; color:#c20013;">Master List: 0 items</div>
-            <div id="scan-status" style="font-size:10px; color:#666; margin: 5px 0;">Ready.</div>
+            <div id="master-count" style="font-weight:bold; font-size:12px; color:#c20013;">Event List: 0 items</div>
+            <div id="scan-status" style="font-size:10px; color:#666; margin: 5px 0;">Ready to collect data ...</div>
             
             <div style="display:flex; gap:5px;">
                 <button class="mcgill-btn" style="background:#444;" id="btn-crawl">Scan all PDFs</button>
@@ -153,10 +153,10 @@ function buildDashboard() {
             <div class="controls-row">
                 <div style="flex: 1;">
                     <select id="time-horizon" class="time-select">
-                        <option value="7">NEXT 7 DAYS</option>
+                        <option value="7" selected>NEXT 7 DAYS</option>
                         <option value="14">NEXT 14 DAYS</option>
                         <option value="30">1 MONTH</option>
-                        <option value="120" selected>FULL SEMESTER</option>
+                        <option value="120">FULL SEMESTER</option>
                     </select>
                 </div>
                 <button id="btn-wipe" class="mcgill-btn" style="flex: 1;">WIPE ALL DATA</button>
@@ -169,7 +169,7 @@ function buildDashboard() {
             <div class="accordion-content" id="cont-personal">
                 <div class="inner-pad">
                     <textarea id="personal-input" class="personal-area" rows="3" placeholder="Ex: 'Part-time work every Friday 2-6pm'."></textarea>
-                    <button id="btn-add-personal" class="mcgill-btn" style="margin-top:0; background:#444;">+ Add to Master List</button>
+                    <button id="btn-add-personal" class="mcgill-btn" style="margin-top:0; background:#444;">+ Add to the list of events</button>
                 </div>
             </div>
 
@@ -289,7 +289,7 @@ async function crawlCourse() {
             scraped.push({ course: document.title.split(' - ')[0], content: text, url: pdfs[i].Url });
         }
         await saveToMaster(scraped);
-        status.innerText = `Successfully added ${scraped.length} PDFs to Master.`;
+        status.innerText = `Successfully added ${scraped.length} PDFs to the list of events.`;
     } catch (e) { status.innerText = "Crawl Error."; }
 }
 
@@ -314,7 +314,7 @@ async function crawlEvents() {
 }
 
 async function clearMaster() {
-    if (confirm("This will delete all gathered course data. Continue?")) {
+    if (confirm("This will delete all gathered data. Continue?")) {
         await chrome.storage.local.set({ "masterList": [], "lastGeneratedEvents": [] });
         location.reload();
     }
@@ -481,7 +481,7 @@ function downloadICS(events) {
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = "McGill_Master_Schedule.ics";
+    link.download = "McGill_Schedule_.ics";
     link.click();
 }
 
