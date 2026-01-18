@@ -153,7 +153,7 @@ function buildDashboard() {
 
     tool.innerHTML = `
         <div style="border-bottom: 2px solid #c20013; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-             <img src="${logoUrl}" alt="Syllabuster Pro" style="max-height: 40px; max-width: 250px; display: block;">
+             <img src="${logoUrl}" alt="Syllabuster Pro" style="max-height: 50px; max-width: 300px; padding: 5px; display: block;">
             <span style="cursor:pointer; font-weight:bold; color:#c20013;" id="close-buster">✕</span>
         </div>
         
