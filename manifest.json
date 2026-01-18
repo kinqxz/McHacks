@@ -13,7 +13,8 @@
   "permissions": [
     "storage",
     "downloads",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "activeTab"
   ],
   "host_permissions": [
     "https://mycourses2.mcgill.ca/*",

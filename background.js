@@ -1,4 +1,11 @@
-// background.js
+// Listen for the extension icon click in the browser toolbar
+chrome.action.onClicked.addListener((tab) => {
+    // Check if we are on the McGill domain before sending
+    if (tab.url && tab.url.includes("mycourses2.mcgill.ca")) {
+        chrome.tabs.sendMessage(tab.id, { type: "REOPEN_UI" });
+    }
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === "GUMLOOP_PROXY") {
         const fetchOptions = {
@@ -11,10 +18,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             .then(async (res) => {
                 const text = await res.text();
                 try {
-                    // Try to return JSON if possible
                     return JSON.parse(text);
                 } catch (e) {
-                    // If server sends HTML, return the status code so we can debug
                     return { isHtmlError: true, status: res.status, body: text.substring(0, 200) };
                 }
             })

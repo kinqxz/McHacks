@@ -58,7 +58,6 @@ function buildDashboard() {
     `;
     document.head.appendChild(style);
 
-    // Get the image URL from the extension
     const logoUrl = chrome.runtime.getURL("syllabusterTitle.png");
 
     const tool = document.createElement('div');
@@ -95,7 +94,6 @@ function buildDashboard() {
     document.getElementById('close-buster').onclick = () => tool.remove();
 }
 
-// --- HELPER: SAVE TO STORAGE ---
 async function saveToMaster(newItems) {
     const data = await chrome.storage.local.get("masterList");
     let masterList = data.masterList || [];
@@ -107,13 +105,11 @@ async function saveToMaster(newItems) {
     await chrome.storage.local.set({ "masterList": masterList });
 }
 
-// --- SCRAPING LOGIC ---
 async function crawlCourse() {
     const status = document.getElementById('scan-status');
     const orgUnitId = getOrgUnitId();
     if (!orgUnitId) return status.innerText = "Error: Navigate to a course!";
     status.innerHTML = `<div class="loader"></div> Scraping PDFs...`;
-    
     try {
         const res = await fetch(`https://mycourses2.mcgill.ca/d2l/api/le/1.45/${orgUnitId}/content/toc`);
         const data = await res.json();
@@ -123,7 +119,6 @@ async function crawlCourse() {
             if (mod.Modules) find(mod.Modules);
         });
         find(data.Modules);
-
         let scraped = [];
         for (let i = 0; i < pdfs.length; i++) {
             status.innerHTML = `<div class="loader"></div> PDF ${i+1}/${pdfs.length}`;
@@ -148,10 +143,8 @@ async function crawlEvents() {
     const orgUnitId = getOrgUnitId();
     if (!orgUnitId) return status.innerText = "Error: Navigate to a course!";
     status.innerHTML = `<div class="loader"></div> Scanning Calendar...`;
-    
     const start = new Date().toISOString();
     const end = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString();
-    
     try {
         const res = await fetch(`https://mycourses2.mcgill.ca/d2l/api/le/1.45/${orgUnitId}/calendar/events/?startDateTime=${start}&endDateTime=${end}`);
         const events = await res.json();
@@ -172,16 +165,13 @@ async function clearMaster() {
     }
 }
 
-// --- AI WORKFLOW ---
 async function startAIWorkflow() {
     const status = document.getElementById('scan-status');
     const data = await chrome.storage.local.get("masterList");
     const list = data.masterList || [];
     if (list.length === 0) return alert("Crawl at least one course first!");
-
     status.innerHTML = `<div class="loader"></div> AI analyzing all courses...`;
     const fullText = list.map(p => `[${p.course}] ${p.content}`).join("\n\n").substring(0, 140000);
-
     chrome.runtime.sendMessage({
         type: "GUMLOOP_PROXY",
         url: `https://api.gumloop.com/api/v1/start_pipeline?api_key=${GUMLOOP_API_KEY}&user_id=${GUMLOOP_USER_ID}&saved_item_id=${GUMLOOP_FLOW_ID}`,
@@ -212,20 +202,12 @@ async function processAIResponse(rawOutput) {
     try {
         const cleanJson = typeof rawOutput === 'string' ? rawOutput.replace(/```json|```/g, "").trim() : JSON.stringify(rawOutput);
         const result = JSON.parse(cleanJson);
-
         const events = Array.isArray(result) ? result : (result.events || []);
         const insights = result.insights || "No major conflicts detected.";
-
-        // Feature 2: Insights
         document.getElementById('insights-container').innerHTML = `<div class="insight-card">${insights}</div>`;
-
-        // Feature 5: Grade Calculator (Save to storage so it persists)
         await chrome.storage.local.set({ "lastGeneratedEvents": events });
         renderGradeCalculator(events);
-
-        // Feature 4: Study Plan (inside ICS)
         downloadICS(events);
-
     } catch (e) { console.error("Parse Error:", e); }
 }
 
@@ -236,6 +218,7 @@ async function loadCalculatedGrades() {
 
 function renderGradeCalculator(events) {
     const tbody = document.querySelector('#calc-table tbody');
+    if (!tbody) return;
     tbody.innerHTML = "";
     events.forEach((e) => {
         const row = document.createElement('tr');
@@ -246,7 +229,6 @@ function renderGradeCalculator(events) {
         `;
         tbody.appendChild(row);
     });
-    
     document.querySelectorAll('.calc-input').forEach(input => {
         input.oninput = () => {
             let totalGrade = 0;
@@ -265,7 +247,6 @@ function downloadICS(events) {
     events.forEach(e => {
         const date = (e.date || "20250101").replace(/\D/g, "");
         const studyPlan = `\nStudy Recommendation: Begin review 7 days before. Focus on core concepts from ${e.course}.`;
-
         ics += "BEGIN:VEVENT\n";
         ics += `UID:${Date.now()}-${Math.random().toString(36).substring(2)}@syllabuster.com\n`;
         ics += `DTSTART;VALUE=DATE:${date}\n`;
@@ -274,10 +255,18 @@ function downloadICS(events) {
         ics += "END:VEVENT\n";
     });
     ics += "END:VCALENDAR";
-
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = "McGill_Master_Schedule.ics";
     link.click();
 }
+
+// --- NEW LISTENER FOR RE-OPENING UI ---
+chrome.runtime.onMessage.addListener((request) => {
+    if (request.type === "REOPEN_UI") {
+        buildDashboard();
+        updateMasterCount();
+        loadCalculatedGrades();
+    }
+});
