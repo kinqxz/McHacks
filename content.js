@@ -3,12 +3,9 @@ const GUMLOOP_API_KEY = "5c2d7adeeb5d4f08b697fd36638ebbda";
 const GUMLOOP_USER_ID = "f3LAKxUglWel0Pg6grvwGUX8vVh2";
 const GUMLOOP_FLOW_ID = "djjPMLFhsfhp82tWFGGVnE";
 
-// https://api.gumloop.com/api/v1/start_pipeline?api_key=5c2d7adeeb5d4f08b697fd36638ebbda&user_id=f3LAKxUglWel0Pg6grvwGUX8vVh2&saved_item_id=djjPMLFhsfhp82tWFGGVnE
-
 // --- INITIALIZATION ---
 if (window.self === window.top) {
     initUI();
-    // Listen for storage changes so the UI updates across all tabs
     chrome.storage.onChanged.addListener((changes) => {
         if (changes.masterList) updateMasterCount();
     });
@@ -23,7 +20,7 @@ function initUI() {
             clearInterval(checkBody);
             buildDashboard();
             updateMasterCount();
-            loadCalculatedGrades(); // Load grades if already generated
+            loadCalculatedGrades();
         }
     }, 100);
 }
@@ -42,6 +39,7 @@ async function updateMasterCount() {
     if (el) el.innerText = `Event List: ${count} items saved`;
 }
 
+// --- UI CONSTRUCTION ---
 function buildDashboard() {
     if (document.getElementById('syllabuster-tool')) return;
 
@@ -49,47 +47,20 @@ function buildDashboard() {
 
     const style = document.createElement('style');
     style.textContent = `
-        /* 1. MAIN CONTAINER (The Glowing Gradient Shell) */
+        /* 1. MAIN CONTAINER */
         #syllabuster-tool { 
-            position: fixed; 
-            top: 20px; 
-            right: 20px; 
-            width: 340px; 
-            z-index: 2147483647; 
-            font-family: 'Segoe UI', sans-serif; 
-            
-            /* PADDING acts as the BORDER THICKNESS (4px) */
-            padding: 4px; 
-            border-radius: 16px; 
-            
-            /* The Animated Gradient */
+            position: fixed; top: 20px; right: 20px; width: 340px; 
+            z-index: 2147483647; font-family: 'Segoe UI', sans-serif; 
+            padding: 4px; border-radius: 16px; 
             background: linear-gradient(135deg, #c20013, #ff4d4d, #8a000d, #c20013);
             background-size: 300% 300%;
             animation: border-pulse 6s ease infinite;
-            
-            /* The "Pop" (Dual Shadows: One for depth, one for glow) */
-            box-shadow: 
-                0 5px 20px rgba(0,0,0,0.4),      /* Depth */
-                0 0 15px rgba(237, 27, 46, 0.6);  /* Red Glow */
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4), 0 0 15px rgba(237, 27, 46, 0.6);
         }
+        @keyframes border-pulse { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-        @keyframes border-pulse {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* 2. INNER CONTENT (The White Card & Scrolling) */
-        .tool-content {
-            background: #fff;
-            color: #333;
-            border-radius: 12px; /* Slightly smaller than parent */
-            padding: 15px;
-            
-            /* SCROLLING happens here now, so the glow is never clipped */
-            max-height: 85vh; 
-            overflow-y: auto; 
-        }
+        /* 2. INNER CONTENT */
+        .tool-content { background: #fff; color: #333; border-radius: 12px; padding: 15px; max-height: 85vh; overflow-y: auto; }
 
         /* --- UI ELEMENTS --- */
         .mcgill-btn { background: #c20013; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 6px; margin-top: 8px; font-size: 11px; transition: 0.2s; }
@@ -97,17 +68,16 @@ function buildDashboard() {
         
         .controls-row { display: flex; gap: 5px; margin-top: 12px; align-items: center; }
 
-        .time-select { width: 100%; padding: 10px 25px 10px 10px; border: 1px solid #ccc; border-radius: 6px; width: 100%; font-family: inherit; font-size: 9px; font-weight: bold; text-transform: uppercase; color: #999; background-color: #fff; outline: none; cursor: pointer; text-align: center; text-align-last: center; transition: 0.2s; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23999999%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2082.2c3.6-3.6%205.4-7.8%205.4-12.8%200-5-1.8-9.3-5.4-12.9z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 10px center; background-size: 8px; }
+        .time-select { width: 100%; padding: 10px 25px 10px 10px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; font-size: 9px; font-weight: bold; text-transform: uppercase; color: #999; background-color: #fff; outline: none; cursor: pointer; text-align: center; text-align-last: center; transition: 0.2s; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23999999%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2082.2c3.6-3.6%205.4-7.8%205.4-12.8%200-5-1.8-9.3-5.4-12.9z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 10px center; background-size: 8px; }
         .time-select:hover { border-color: #c20013; color: #c20013; }
 
-        #btn-wipe { margin-top: 0 !important; background: #fff; color: #999; max-width: 153px; border: 1px solid #ccc; font-size: 9px; }
+        #btn-wipe { margin-top: 0 !important; background: #fff; color: #999; border: 1px solid #ccc; font-size: 9px; }
         #btn-wipe:hover { border-color: #c20013; color: #c20013; }
 
         #btn-generate { background: linear-gradient(45deg, #c20013 0%, #ff4d4d 100%); color: white; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: 700; border-radius: 6px; margin-top: 15px; font-size: 13px; text-transform: none; letter-spacing: 0.3px; box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; animation: pulse-glow 2.5s infinite ease-in-out; }
         #btn-generate:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 8px 25px rgba(194, 0, 19, 0.75), 0 0 10px rgba(255, 77, 77, 0.5); filter: brightness(1.1); }
         #btn-generate.processing { pointer-events: none; cursor: wait; box-shadow: 0 0 20px rgba(255, 77, 77, 0.8); transform: scale(0.98); }
         #btn-generate.processing::after { content: ""; position: absolute; top: 0; left: -150%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 20%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0.1) 80%, transparent 100%); transform: skewX(-25deg); animation: speed-bar-anim 1s infinite linear; }
-        
         @keyframes speed-bar-anim { 0% { left: -150%; } 100% { left: 150%; } }
         @keyframes pulse-glow { 0% { box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); } 50% { box-shadow: 0 0 25px rgba(194, 0, 19, 0.8), 0 0 12px rgba(255, 77, 77, 0.6); } 100% { box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); } }
 
@@ -126,13 +96,21 @@ function buildDashboard() {
         .personal-area:focus { border-color: #c20013; }
         .loader { border: 2px solid #f3f3f3; border-top: 2px solid #c20013; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .preview-item { border-bottom: 1px solid #eee; padding: 6px 0; display: flex; justify-content: space-between; font-size: 11px; }
+        .preview-item:last-child { border-bottom: none; }
+        .preview-date { color: #999; font-size: 10px; margin-bottom: 2px; }
+        .preview-title { font-weight: bold; color: #333; }
+        .preview-badge { background: #ffebeb; color: #c20013; padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: bold; }
+        
+        #grade-result { text-align: right; margin-top: 10px; font-size: 11px; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
+        #grade-total-val { color: #c20013; font-weight: bold; font-size: 13px; }
     `;
     document.head.appendChild(style);
 
     const tool = document.createElement('div');
     tool.id = 'syllabuster-tool';
 
-    // IMPORTANT: Wrapped content in "tool-content" div
     tool.innerHTML = `
         <div class="tool-content">
             <div style="border-bottom: 2px solid #c20013; padding-bottom:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
@@ -144,10 +122,12 @@ function buildDashboard() {
             <div id="scan-status" style="font-size:10px; color:#666; margin: 5px 0;">Ready to collect data ...</div>
             
             <div style="display:flex; gap:5px;">
-                <button class="mcgill-btn" style="background:#444;" id="btn-crawl">Scan all PDFs</button>
-                <button class="mcgill-btn" style="background:#444;" id="btn-events">Scan events</button>
+                <button class="mcgill-btn" style="background:#444;" id="btn-crawl">Scan PDFs</button>
+                <button class="mcgill-btn" style="background:#444;" id="btn-events">Scan Events</button>
+                <button class="mcgill-btn" style="background:#6c757d;" id="btn-upload">Upload Files</button>
             </div>
-            
+            <input type="file" id="manual-upload-input" accept=".pdf" style="display:none;" />
+
             <button id="btn-generate">✨ Analyze & Generate</button>
             
             <div class="controls-row">
@@ -162,6 +142,7 @@ function buildDashboard() {
                 <button id="btn-wipe" class="mcgill-btn" style="flex: 1;">WIPE ALL DATA</button>
             </div>
             
+            <!-- 1. PERSONAL INPUT -->
             <div class="accordion-header" id="head-personal">
                 <span>Add Personal Events</span>
                 <span class="arrow-icon"></span>
@@ -173,6 +154,7 @@ function buildDashboard() {
                 </div>
             </div>
 
+            <!-- 2. INSIGHTS -->
             <div class="accordion-header" id="head-insights">
                 <span>Conflict Detection (Insights)</span>
                 <span class="arrow-icon"></span>
@@ -181,6 +163,7 @@ function buildDashboard() {
                 <div id="insights-container" class="inner-pad"><div class="insight-card">No crunch weeks detected yet.</div></div>
             </div>
 
+            <!-- 3. GRADE CALCULATOR -->
             <div class="accordion-header" id="head-calc">
                 <span>Grade Calculator</span>
                 <span class="arrow-icon"></span>
@@ -192,6 +175,33 @@ function buildDashboard() {
                             <thead><tr><th>Assessment</th><th>Wgt%</th><th>Score%</th></tr></thead>
                             <tbody></tbody>
                         </table>
+                    </div>
+                    <div id="grade-result">Current Est. Average: <span id="grade-total-val">--%</span></div>
+                </div>
+            </div>
+
+            <!-- 4. UPCOMING DEADLINES -->
+            <div class="accordion-header" id="head-preview">
+                <span>Upcoming Deadlines</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="accordion-content" id="cont-preview">
+                <div class="inner-pad" id="preview-container">
+                    <div style="color:#999; font-size:10px; font-style:italic;">No events generated yet.</div>
+                </div>
+            </div>
+
+            <!-- 5. FOCUS TIMER (NEW FEATURE) -->
+            <div class="accordion-header" id="head-timer">
+                <span>Pomodoro Focus Timer</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="accordion-content" id="cont-timer">
+                <div class="inner-pad" style="text-align:center;">
+                    <div id="pomo-display" style="font-size:36px; font-weight:bold; color:#333; margin:10px 0; letter-spacing:1px;">25:00</div>
+                    <div style="display:flex; gap:5px; justify-content:center;">
+                        <button id="btn-pomo-toggle" class="mcgill-btn" style="width:auto; padding:6px 20px;">START</button>
+                        <button id="btn-pomo-reset" class="mcgill-btn" style="width:auto; padding:6px 20px; background:#666;">RESET</button>
                     </div>
                 </div>
             </div>
@@ -205,15 +215,14 @@ function buildDashboard() {
     document.getElementById('btn-wipe').onclick = clearMaster;
     document.getElementById('close-buster').onclick = () => tool.remove();
 
+    document.getElementById('btn-upload').onclick = () => document.getElementById('manual-upload-input').click();
+    document.getElementById('manual-upload-input').onchange = handleManualUpload;
+
     document.getElementById('btn-add-personal').onclick = async () => {
         const input = document.getElementById('personal-input');
         const text = input.value.trim();
         if (!text) return;
-        const newItem = {
-            course: "Personal",
-            content: `PERSONAL ENTRY: ${text}`,
-            url: `personal-${Date.now()}`
-        };
+        const newItem = { course: "Personal", content: `PERSONAL ENTRY: ${text}`, url: `personal-${Date.now()}` };
         await saveToMaster([newItem]);
         await updateMasterCount();
         input.value = "";
@@ -222,6 +231,49 @@ function buildDashboard() {
         btn.innerText = "Saved!";
         setTimeout(() => btn.innerText = oldText, 1000);
     };
+
+    // --- TIMER LOGIC ---
+    let timerInterval = null;
+    let timeLeft = 25 * 60; // 25 minutes
+    let isRunning = false;
+
+    const updateDisplay = () => {
+        const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+        const s = (timeLeft % 60).toString().padStart(2, '0');
+        const display = document.getElementById('pomo-display');
+        if (display) display.innerText = `${m}:${s}`;
+    };
+
+    document.getElementById('btn-pomo-toggle').onclick = () => {
+        if (isRunning) {
+            clearInterval(timerInterval);
+            document.getElementById('btn-pomo-toggle').innerText = "RESUME";
+        } else {
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateDisplay();
+                } else {
+                    clearInterval(timerInterval);
+                    alert("Focus session complete! Take a break.");
+                    document.getElementById('btn-pomo-toggle').innerText = "START";
+                    isRunning = false;
+                    return;
+                }
+            }, 1000);
+            document.getElementById('btn-pomo-toggle').innerText = "PAUSE";
+        }
+        isRunning = !isRunning;
+    };
+
+    document.getElementById('btn-pomo-reset').onclick = () => {
+        clearInterval(timerInterval);
+        isRunning = false;
+        timeLeft = 25 * 60;
+        updateDisplay();
+        document.getElementById('btn-pomo-toggle').innerText = "START";
+    };
+    // -------------------
 
     function toggleSection(headerId, contentId) {
         const header = document.getElementById(headerId);
@@ -243,11 +295,14 @@ function buildDashboard() {
         });
     }
 
+    toggleSection('head-preview', 'cont-preview');
     toggleSection('head-personal', 'cont-personal');
     toggleSection('head-insights', 'cont-insights');
     toggleSection('head-calc', 'cont-calc');
+    toggleSection('head-timer', 'cont-timer'); // Register new section
 }
 
+// --- LOGIC & HELPERS ---
 
 async function saveToMaster(newItems) {
     const data = await chrome.storage.local.get("masterList");
@@ -258,6 +313,38 @@ async function saveToMaster(newItems) {
         }
     });
     await chrome.storage.local.set({ "masterList": masterList });
+}
+
+async function handleManualUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const status = document.getElementById('scan-status');
+    status.innerHTML = `<div class="loader"></div> Reading PDF...`;
+
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = "";
+        for (let j = 1; j <= pdf.numPages; j++) {
+            const page = await pdf.getPage(j);
+            const content = await page.getTextContent();
+            text += content.items.map(item => item.str).join(" ") + " ";
+        }
+
+        const newItem = {
+            course: file.name.replace(".pdf", "").substring(0, 15),
+            content: text,
+            url: `manual-${Date.now()}`
+        };
+
+        await saveToMaster([newItem]);
+        await updateMasterCount();
+        status.innerText = "Manual PDF added successfully!";
+    } catch (err) {
+        console.error(err);
+        status.innerText = "Error reading PDF file.";
+    }
 }
 
 async function crawlCourse() {
@@ -289,8 +376,9 @@ async function crawlCourse() {
             scraped.push({ course: document.title.split(' - ')[0], content: text, url: pdfs[i].Url });
         }
         await saveToMaster(scraped);
-        status.innerText = `Successfully added ${scraped.length} PDFs to the list of events.`;
-    } catch (e) { status.innerText = "Crawl Error."; }
+        status.innerText = `Successfully added ${scraped.length} PDFs to Master.`;
+        updateMasterCount();
+    } catch (e) { console.error(e); status.innerText = "Crawl Error (Check Console)."; }
 }
 
 async function crawlEvents() {
@@ -310,19 +398,21 @@ async function crawlEvents() {
         }));
         await saveToMaster(scraped);
         status.innerText = `Added ${scraped.length} calendar items.`;
+        updateMasterCount();
     } catch (e) { status.innerText = "Calendar Error."; }
 }
 
 async function clearMaster() {
-    if (confirm("This will delete all gathered data. Continue?")) {
+    if (confirm("This will delete all gathered course data. Continue?")) {
         await chrome.storage.local.set({ "masterList": [], "lastGeneratedEvents": [] });
         location.reload();
     }
 }
 
+// --- MODIFIED AI WORKFLOW WITH STORYTELLING ---
 async function startAIWorkflow() {
     const status = document.getElementById('scan-status');
-    const btn = document.getElementById('btn-generate'); // GET BUTTON
+    const btn = document.getElementById('btn-generate');
     const data = await chrome.storage.local.get("masterList");
     const list = data.masterList || [];
 
@@ -334,12 +424,25 @@ async function startAIWorkflow() {
 
     if (list.length === 0 && tempText === "") return alert("Crawl at least one course first!");
 
-    // --- ENABLE LOADING EFFECT ---
-    status.innerHTML = `<div class="loader"></div> AI analyzing...`;
-    btn.classList.add("processing"); // Triggers CSS animation
+    // --- STORYTELLING LOADING STATE ---
+    btn.classList.add("processing");
     const originalBtnText = btn.innerText;
-    btn.innerText = "✨ Processing...";
-    // -----------------------------
+
+    const loadingSteps = [
+        "✨ Reading Syllabi...",
+        "🧠 Extracting Dates...",
+        "⚖️ Weighing Grades...",
+        "⚔️ Checking Conflicts...",
+        "📅 Finalizing Calendar..."
+    ];
+    let stepIndex = 0;
+    btn.innerText = loadingSteps[0];
+
+    const loadingInterval = setInterval(() => {
+        stepIndex = (stepIndex + 1) % loadingSteps.length;
+        btn.innerText = loadingSteps[stepIndex];
+    }, 2500);
+    // ----------------------------------
 
     let fullText = list.map(p => `[${p.course}] ${p.content}`).join("\n\n");
     fullText += tempText;
@@ -354,7 +457,7 @@ async function startAIWorkflow() {
     }, (response) => {
         if (!response || !response.data) {
             status.innerText = "Connection Error (Check API)";
-            // DISABLE LOADING EFFECT ON ERROR
+            clearInterval(loadingInterval);
             btn.classList.remove("processing");
             btn.innerText = originalBtnText;
             return;
@@ -370,73 +473,174 @@ async function startAIWorkflow() {
                 const run = pollRes.data;
                 if (run.state === "DONE") {
                     clearInterval(poll);
+                    clearInterval(loadingInterval);
+
                     status.innerText = "Analysis Complete!";
                     processAIResponse(run.outputs.output);
 
-                    // --- DISABLE LOADING EFFECT ON SUCCESS ---
                     btn.classList.remove("processing");
                     btn.innerText = originalBtnText;
-                    // ----------------------------------------
                 }
             });
         }, 4000);
     });
 }
 
-
 async function processAIResponse(rawOutput) {
     try {
         const cleanJson = typeof rawOutput === 'string' ? rawOutput.replace(/```json|```/g, "").trim() : JSON.stringify(rawOutput);
         const result = JSON.parse(cleanJson);
-        const events = Array.isArray(result) ? result : (result.events || []);
+        const allEvents = Array.isArray(result) ? result : (result.events || []);
         const insights = result.insights || "No major conflicts detected.";
+
+        const daysToKeep = parseInt(document.getElementById('time-horizon').value) || 120;
+        const today = new Date();
+        const cutoffDate = new Date();
+        cutoffDate.setDate(today.getDate() + daysToKeep);
+        const cutoffStr = cutoffDate.toISOString().replace(/[-:T.]/g, "").slice(0, 8);
+
+        const filteredEvents = allEvents.filter(e => {
+            const eventDateStr = (e.date || "99999999").replace(/[^0-9]/g, "").slice(0, 8);
+            return eventDateStr <= cutoffStr;
+        });
+
         document.getElementById('insights-container').innerHTML = `<div class="insight-card">${insights}</div>`;
-        await chrome.storage.local.set({ "lastGeneratedEvents": events });
-        renderGradeCalculator(events);
-        downloadICS(events);
+
+        await chrome.storage.local.set({ "lastGeneratedEvents": filteredEvents });
+
+        renderGradeCalculator(filteredEvents);
+        renderSchedulePreview(filteredEvents);
+        downloadICS(filteredEvents);
+
     } catch (e) { console.error("Parse Error:", e); }
+}
+
+function renderSchedulePreview(events) {
+    const container = document.getElementById('preview-container');
+    if (!container) return;
+
+    if (!events || events.length === 0) {
+        container.innerHTML = `<div style="color:#999; font-size:10px; font-style:italic;">No events found.</div>`;
+        return;
+    }
+
+    const sorted = [...events].sort((a, b) => {
+        const dateA = (a.date || "99999999").replace(/[^0-9]/g, "").slice(0,8);
+        const dateB = (b.date || "99999999").replace(/[^0-9]/g, "").slice(0,8);
+        return dateA.localeCompare(dateB);
+    });
+
+    const today = new Date().toISOString().slice(0,10).replace(/-/g, "");
+
+    const upcoming = sorted.filter(e => {
+        const d = (e.date || "").replace(/[^0-9]/g, "").slice(0,8);
+        const title = (e.title || "").toLowerCase();
+        // Exclude past events AND Lectures
+        const isLecture = title.includes("lecture");
+        return d >= today && !isLecture;
+    });
+
+    const top5 = upcoming.slice(0, 5);
+
+    if (top5.length === 0) {
+        container.innerHTML = `<div style="color:#999; font-size:10px;">No upcoming deadlines (lectures hidden).</div>`;
+    } else {
+        let html = "";
+        top5.forEach(e => {
+            const raw = (e.date || "").replace(/[^0-9]/g, "");
+            const y = raw.slice(0,4), m = raw.slice(4,6), d = raw.slice(6,8);
+            const dateObj = new Date(`${y}-${m}-${d}`);
+            const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+            const diffTime = dateObj - new Date();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const badgeText = diffDays <= 0 ? "TODAY" : (diffDays === 1 ? "TMROW" : `In ${diffDays}d`);
+
+            html += `
+            <div class="preview-item">
+                <div>
+                    <div class="preview-date">${dateStr} • <span style="color:#c20013; font-weight:bold;">${e.course}</span></div>
+                    <div class="preview-title">${e.title}</div>
+                </div>
+                <div style="align-self:center;">
+                    <span class="preview-badge">${badgeText}</span>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+
+        const header = document.getElementById('head-preview');
+        const content = document.getElementById('cont-preview');
+        if (content && !content.classList.contains('open')) {
+            content.classList.add('open');
+            header.classList.add('active');
+            content.style.maxHeight = content.scrollHeight + "px";
+        }
+    }
 }
 
 async function loadCalculatedGrades() {
     const data = await chrome.storage.local.get("lastGeneratedEvents");
-    if (data.lastGeneratedEvents) renderGradeCalculator(data.lastGeneratedEvents);
+    if (data.lastGeneratedEvents) {
+        renderGradeCalculator(data.lastGeneratedEvents);
+        renderSchedulePreview(data.lastGeneratedEvents);
+    }
 }
 
+// --- UPDATED GRADE CALCULATOR WITH DISPLAY ---
 function renderGradeCalculator(events) {
     const tbody = document.querySelector('#calc-table tbody');
     if (!tbody) return;
     tbody.innerHTML = "";
-    events.forEach((e) => {
+
+    // Only show items that have a weight defined
+    const gradedEvents = events.filter(e => parseFloat(e.weight) > 0);
+
+    gradedEvents.forEach((e) => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${e.title}</td>
-            <td>${e.weight || 0}%</td>
+            <td>${e.weight || 0}</td>
             <td><input type="number" class="calc-input" data-weight="${parseFloat(e.weight) || 0}" placeholder="0"></td>
         `;
         tbody.appendChild(row);
     });
+
+    // Recalculation Logic
+    const updateTotal = () => {
+        let weightedSum = 0;
+        let totalWeightSoFar = 0;
+
+        document.querySelectorAll('.calc-input').forEach(i => {
+            const w = parseFloat(i.dataset.weight);
+            const val = i.value.trim(); // Check if user actually typed something
+
+            if (val !== "") {
+                const score = parseFloat(val);
+                weightedSum += (score * w);
+                totalWeightSoFar += w;
+            }
+        });
+
+        // Calculate Average based on what has been graded so far
+        const average = totalWeightSoFar > 0 ? (weightedSum / totalWeightSoFar).toFixed(1) : "--";
+
+        // Update the new bottom display
+        const resEl = document.getElementById('grade-total-val');
+        if (resEl) resEl.innerText = `${average}%`;
+    };
+
     document.querySelectorAll('.calc-input').forEach(input => {
-        input.oninput = () => {
-            let totalGrade = 0;
-            document.querySelectorAll('.calc-input').forEach(i => {
-                const w = parseFloat(i.dataset.weight);
-                const val = parseFloat(i.value) || 0;
-                totalGrade += (val * (w / 100));
-            });
-            document.getElementById('scan-status').innerText = `Est. Current Grade: ${totalGrade.toFixed(2)}%`;
-        };
+        input.oninput = updateTotal;
     });
 }
 
 function downloadICS(events) {
     let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Syllabuster//EN\n";
-
     events.forEach(e => {
-        // 1. Clean the string to just numbers and T
         let startRaw = (e.date || "20250101").replace(/[^0-9T]/g, "");
         let endRaw = (e.end_date || "").replace(/[^0-9T]/g, "");
 
-        // 2. AI FIX: If it has 12+ digits but missing 'T', insert it
         if (!startRaw.includes("T") && startRaw.length >= 12) {
             startRaw = startRaw.substring(0, 8) + "T" + startRaw.substring(8);
         }
@@ -444,16 +648,12 @@ function downloadICS(events) {
             endRaw = endRaw.substring(0, 8) + "T" + endRaw.substring(8);
         }
 
-        // --- FIX STARTS HERE ---
-        // Only add the "Weight:" text if e.weight actually exists
         const weightInfo = e.weight ? `Weight: ${e.weight}.` : "";
         const studyPlan = `\nStudy Recommendation: Begin review 7 days before. Focus on core concepts from ${e.course}.`;
-        // -----------------------
 
         ics += "BEGIN:VEVENT\n";
         ics += `UID:${Date.now()}-${Math.random().toString(36).substring(2)}@syllabuster.com\n`;
 
-        // 3. LOGIC: Determine if this is All Day or Specific Time
         const isSpecificTime = startRaw.includes("T") && !startRaw.includes("T000000");
 
         if (isSpecificTime) {
@@ -469,23 +669,18 @@ function downloadICS(events) {
         }
 
         ics += `SUMMARY:[${e.course || 'Course'}] ${e.title}\n`;
-
-        // Use the conditional variable here
         ics += `DESCRIPTION:${weightInfo}${studyPlan}\n`;
-
         ics += "END:VEVENT\n";
     });
-
     ics += "END:VCALENDAR";
 
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = "McGill_Schedule_.ics";
+    link.download = "McGill_Master_Schedule.ics";
     link.click();
 }
 
-// --- NEW LISTENER FOR RE-OPENING UI ---
 chrome.runtime.onMessage.addListener((request) => {
     if (request.type === "REOPEN_UI") {
         buildDashboard();
