@@ -20,7 +20,7 @@ function initUI() {
             clearInterval(checkBody);
             buildDashboard();
             updateMasterCount();
-            loadCalculatedGrades();
+            // loadCalculatedGrades(); // REMOVED
         }
     }, 100);
 }
@@ -88,10 +88,7 @@ function buildDashboard() {
         .accordion-content.open { opacity: 1; }
         .inner-pad { padding-top: 10px; padding-bottom: 5px; }
         .insight-card { background: #fff5f5; border-left: 4px solid #c20013; padding: 8px; font-size: 11px; border-radius: 4px; color: #444; }
-        .calc-table { width: 100%; font-size: 10px; border-collapse: collapse; }
-        .calc-table td, .calc-table th { border: 1px solid #eee; padding: 4px; text-align: left; }
-        .calc-input { width: 40px; border: 1px solid #ccc; font-size: 10px; border-radius:3px; padding:2px; text-align:center; }
-        .calc-input:focus { border-color: #c20013; outline:none; }
+        
         .personal-area { width: 94%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 11px; resize: vertical; margin-bottom: 5px; outline: none; }
         .personal-area:focus { border-color: #c20013; }
         .loader { border: 2px solid #f3f3f3; border-top: 2px solid #c20013; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
@@ -103,8 +100,12 @@ function buildDashboard() {
         .preview-title { font-weight: bold; color: #333; }
         .preview-badge { background: #ffebeb; color: #c20013; padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: bold; }
         
-        #grade-result { text-align: right; margin-top: 10px; font-size: 11px; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
-        #grade-total-val { color: #c20013; font-weight: bold; font-size: 13px; }
+        /* UTIL BUTTONS */
+        .util-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .util-btn { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 8px; border-radius: 6px; font-size: 10px; cursor: pointer; text-align: center; transition: 0.2s; }
+        .util-btn:hover { border-color: #c20013; color: #c20013; background: #fff5f5; }
+        .copy-context-btn { grid-column: span 2; background: #333; color: white; border: none; font-weight: bold; }
+        .copy-context-btn:hover { background: #555; color: white; }
     `;
     document.head.appendChild(style);
 
@@ -124,7 +125,7 @@ function buildDashboard() {
             <div style="display:flex; gap:5px;">
                 <button class="mcgill-btn" style="background:#444;" id="btn-crawl">Scan PDFs</button>
                 <button class="mcgill-btn" style="background:#444;" id="btn-events">Scan Events</button>
-                <button class="mcgill-btn" style="background:#6c757d;" id="btn-upload">Upload Files</button>
+                <button class="mcgill-btn" style="background:#6c757d;" id="btn-upload">📂 Upload</button>
             </div>
             <input type="file" id="manual-upload-input" accept=".pdf" style="display:none;" />
 
@@ -163,35 +164,7 @@ function buildDashboard() {
                 <div id="insights-container" class="inner-pad"><div class="insight-card">No crunch weeks detected yet.</div></div>
             </div>
 
-            <!-- 3. GRADE CALCULATOR -->
-            <div class="accordion-header" id="head-calc">
-                <span>Grade Calculator</span>
-                <span class="arrow-icon"></span>
-            </div>
-            <div class="accordion-content" id="cont-calc">
-                <div class="inner-pad">
-                    <div id="calculator-container" style="max-height:180px; overflow-y:auto;">
-                        <table class="calc-table" id="calc-table">
-                            <thead><tr><th>Assessment</th><th>Wgt%</th><th>Score%</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                    <div id="grade-result">Current Est. Average: <span id="grade-total-val">--%</span></div>
-                </div>
-            </div>
-
-            <!-- 4. UPCOMING DEADLINES -->
-            <div class="accordion-header" id="head-preview">
-                <span>Upcoming Deadlines</span>
-                <span class="arrow-icon"></span>
-            </div>
-            <div class="accordion-content" id="cont-preview">
-                <div class="inner-pad" id="preview-container">
-                    <div style="color:#999; font-size:10px; font-style:italic;">No events generated yet.</div>
-                </div>
-            </div>
-
-            <!-- 5. FOCUS TIMER (NEW FEATURE) -->
+            <!-- 3. FOCUS TIMER -->
             <div class="accordion-header" id="head-timer">
                 <span>Pomodoro Focus Timer</span>
                 <span class="arrow-icon"></span>
@@ -205,6 +178,35 @@ function buildDashboard() {
                     </div>
                 </div>
             </div>
+            
+            <!-- 4. UPCOMING DEADLINES -->
+            <div class="accordion-header" id="head-preview">
+                <span>Upcoming Events</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="accordion-content" id="cont-preview">
+                <div class="inner-pad" id="preview-container">
+                    <div style="color:#999; font-size:10px; font-style:italic;">No events generated yet.</div>
+                </div>
+            </div>
+
+            <!-- 5. UTILITIES -->
+            <div class="accordion-header" id="head-utils">
+                <span>Smart Utilities</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="accordion-content" id="cont-utils">
+                <div class="inner-pad">
+                    <div class="util-grid">
+                        <button id="btn-copy-context" class="util-btn copy-context-btn">📋 Copy Full Context for ChatGPT</button>
+                        <button class="util-btn" onclick="window.open('https://www.mcgill.ca/minerva')">Minerva</button>
+                        <button class="util-btn" onclick="window.open('https://www.mcgill.ca/library')">Library</button>
+                        <button class="util-btn" onclick="window.open('https://maps.mcgill.ca')">Campus Map</button>
+                        <button class="util-btn" onclick="window.open('https://www.mcgill.ca/wellness-hub')">Wellness</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
    `;
     document.body.appendChild(tool);
@@ -230,6 +232,25 @@ function buildDashboard() {
         const oldText = btn.innerText;
         btn.innerText = "Saved!";
         setTimeout(() => btn.innerText = oldText, 1000);
+    };
+
+    // --- COPY CONTEXT LOGIC ---
+    document.getElementById('btn-copy-context').onclick = async () => {
+        const data = await chrome.storage.local.get("masterList");
+        const list = data.masterList || [];
+
+        if (list.length === 0) {
+            alert("No data to copy. Scan some courses first!");
+            return;
+        }
+
+        const fullText = list.map(p => `[${p.course}] ${p.content}`).join("\n\n");
+        navigator.clipboard.writeText(fullText).then(() => {
+            const btn = document.getElementById('btn-copy-context');
+            const original = btn.innerText;
+            btn.innerText = "✅ Copied to Clipboard!";
+            setTimeout(() => btn.innerText = original, 2000);
+        });
     };
 
     // --- TIMER LOGIC ---
@@ -297,8 +318,8 @@ function buildDashboard() {
     toggleSection('head-preview', 'cont-preview');
     toggleSection('head-personal', 'cont-personal');
     toggleSection('head-insights', 'cont-insights');
-    toggleSection('head-calc', 'cont-calc');
-    toggleSection('head-timer', 'cont-timer'); // Register new section
+    toggleSection('head-timer', 'cont-timer');
+    toggleSection('head-utils', 'cont-utils');
 }
 
 // --- LOGIC & HELPERS ---
@@ -375,7 +396,7 @@ async function crawlCourse() {
             scraped.push({ course: document.title.split(' - ')[0], content: text, url: pdfs[i].Url });
         }
         await saveToMaster(scraped);
-        status.innerText = `Successfully added ${scraped.length} PDFs to Master.`;
+        status.innerText = `Successfully added ${scraped.length} PDFs to the list of events.`;
         updateMasterCount();
     } catch (e) { console.error(e); status.innerText = "Crawl Error (Check Console)."; }
 }
@@ -507,7 +528,6 @@ async function processAIResponse(rawOutput) {
 
         await chrome.storage.local.set({ "lastGeneratedEvents": filteredEvents });
 
-        renderGradeCalculator(filteredEvents);
         renderSchedulePreview(filteredEvents);
         downloadICS(filteredEvents);
 
@@ -553,7 +573,7 @@ function renderSchedulePreview(events) {
 
             const diffTime = dateObj - new Date();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            const badgeText = diffDays <= 0 ? "TODAY" : (diffDays === 1 ? "TMROW" : `In ${diffDays}d`);
+            const badgeText = diffDays <= 0 ? "TODAY" : (diffDays === 1 ? "TMRW" : `In ${diffDays}d`);
 
             html += `
             <div class="preview-item">
@@ -581,57 +601,8 @@ function renderSchedulePreview(events) {
 async function loadCalculatedGrades() {
     const data = await chrome.storage.local.get("lastGeneratedEvents");
     if (data.lastGeneratedEvents) {
-        renderGradeCalculator(data.lastGeneratedEvents);
         renderSchedulePreview(data.lastGeneratedEvents);
     }
-}
-
-// --- UPDATED GRADE CALCULATOR WITH DISPLAY ---
-function renderGradeCalculator(events) {
-    const tbody = document.querySelector('#calc-table tbody');
-    if (!tbody) return;
-    tbody.innerHTML = "";
-
-    // Only show items that have a weight defined
-    const gradedEvents = events.filter(e => parseFloat(e.weight) > 0);
-
-    gradedEvents.forEach((e) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${e.title}</td>
-            <td>${e.weight || 0}</td>
-            <td><input type="number" class="calc-input" data-weight="${parseFloat(e.weight) || 0}" placeholder="0"></td>
-        `;
-        tbody.appendChild(row);
-    });
-
-    // Recalculation Logic
-    const updateTotal = () => {
-        let weightedSum = 0;
-        let totalWeightSoFar = 0;
-
-        document.querySelectorAll('.calc-input').forEach(i => {
-            const w = parseFloat(i.dataset.weight);
-            const val = i.value.trim(); // Check if user actually typed something
-
-            if (val !== "") {
-                const score = parseFloat(val);
-                weightedSum += (score * w);
-                totalWeightSoFar += w;
-            }
-        });
-
-        // Calculate Average based on what has been graded so far
-        const average = totalWeightSoFar > 0 ? (weightedSum / totalWeightSoFar).toFixed(1) : "--";
-
-        // Update the new bottom display
-        const resEl = document.getElementById('grade-total-val');
-        if (resEl) resEl.innerText = `${average}%`;
-    };
-
-    document.querySelectorAll('.calc-input').forEach(input => {
-        input.oninput = updateTotal;
-    });
 }
 
 function downloadICS(events) {
@@ -684,6 +655,6 @@ chrome.runtime.onMessage.addListener((request) => {
     if (request.type === "REOPEN_UI") {
         buildDashboard();
         updateMasterCount();
-        loadCalculatedGrades();
+        // loadCalculatedGrades(); // REMOVED
     }
 });
