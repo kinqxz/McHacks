@@ -1,9 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "McGill Master Scraper",
-  "version": "4.0",
+  "name": "Syllabuster",
+  "version": "1.3",
   "permissions": ["storage", "downloads", "unlimitedStorage"],
-  "host_permissions": ["https://mycourses2.mcgill.ca/*", "https://api.gumloop.com/*"],
+  "host_permissions": [
+    "https://mycourses2.mcgill.ca/*",
+    "https://api.gumloop.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["https://mycourses2.mcgill.ca/*"],
