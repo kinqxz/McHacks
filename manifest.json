@@ -2,7 +2,19 @@
   "manifest_version": 3,
   "name": "Syllabuster",
   "version": "1.3",
-  "permissions": ["storage", "downloads", "unlimitedStorage"],
+  "icons": {
+    "16": "syllabusterIcon.png",
+    "48": "syllabusterIcon.png",
+    "128": "syllabusterIcon.png"
+  },
+  "action": {
+    "default_icon": "syllabusterIcon.png"
+  },
+  "permissions": [
+    "storage",
+    "downloads",
+    "unlimitedStorage"
+  ],
   "host_permissions": [
     "https://mycourses2.mcgill.ca/*",
     "https://api.gumloop.com/*"
@@ -12,16 +24,26 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://mycourses2.mcgill.ca/*"],
-      "js": ["pdf.min.js", "content.js"],
+      "matches": [
+        "https://mycourses2.mcgill.ca/*"
+      ],
+      "js": [
+        "pdf.min.js",
+        "content.js"
+      ],
       "all_frames": true,
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["pdf.worker.min.js"],
-      "matches": ["https://mycourses2.mcgill.ca/*"]
+      "resources": [
+        "pdf.worker.min.js",
+        "syllabusterTitle.png"
+      ],
+      "matches": [
+        "https://mycourses2.mcgill.ca/*"
+      ]
     }
   ]
 }

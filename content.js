@@ -44,33 +44,36 @@ function buildDashboard() {
     if (document.getElementById('syllabuster-tool')) return;
     const style = document.createElement('style');
     style.textContent = `
-        #syllabuster-tool { position: fixed; top: 20px; right: 20px; width: 340px; background: #fff; color: #333; border: 3px solid #ed1b2e; border-radius: 12px; padding: 15px; z-index: 2147483647; font-family: 'Segoe UI', sans-serif; box-shadow: 0px 8px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
-        .mcgill-btn { background: #ed1b2e; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 6px; margin-top: 8px; font-size: 11px; transition: 0.2s; }
+        #syllabuster-tool { position: fixed; top: 20px; right: 20px; width: 340px; background: #fff; color: #333; border: 3px solid #c20013; border-radius: 12px; padding: 15px; z-index: 2147483647; font-family: 'Arial', sans-serif; box-shadow: 0px 8px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+        .mcgill-btn { background: #c20013; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 6px; margin-top: 8px; font-size: 11px; transition: 0.2s; }
         .mcgill-btn:hover { opacity: 0.8; }
-        .section-title { font-weight: bold; font-size: 12px; color: #ed1b2e; margin-top: 15px; border-bottom: 1px solid #eee; padding-bottom: 3px; }
-        .insight-card { background: #fff5f5; border-left: 4px solid #ed1b2e; padding: 8px; font-size: 11px; margin-top: 10px; border-radius: 4px; color: #444; }
+        .section-title { font-weight: bold; font-size: 12px; color: #c20013; margin-top: 15px; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+        .insight-card { background: #fff5f5; border-left: 4px solid #c20013; padding: 8px; font-size: 11px; margin-top: 10px; border-radius: 4px; color: #444; }
         .calc-table { width: 100%; font-size: 10px; margin-top: 10px; border-collapse: collapse; }
         .calc-table td, .calc-table th { border: 1px solid #eee; padding: 4px; text-align: left; }
         .calc-input { width: 40px; border: 1px solid #ccc; font-size: 10px; }
-        .loader { border: 2px solid #f3f3f3; border-top: 2px solid #ed1b2e; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
+        .loader { border: 2px solid #f3f3f3; border-top: 2px solid #c20013; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     `;
     document.head.appendChild(style);
-    
+
+    // Get the image URL from the extension
+    const logoUrl = chrome.runtime.getURL("syllabusterTitle.png");
+
     const tool = document.createElement('div');
     tool.id = 'syllabuster-tool';
     tool.innerHTML = `
-        <div style="font-weight:bold; color:#ed1b2e; border-bottom: 2px solid #ed1b2e; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-            <span>SYLLABUSTER PRO 🚀</span>
-            <span style="cursor:pointer;" id="close-buster">✕</span>
+        <div style="border-bottom: 2px solid #c20013; padding-bottom:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+            <img src="${logoUrl}" alt="Syllabuster" style="max-height: 50px; max-width: 300px; display: block;">
+            <span style="cursor:pointer; font-weight:bold; color:#c20013;" id="close-buster">✕</span>
         </div>
-        <div id="master-count" style="font-weight:bold; font-size:12px; color:#ed1b2e;">Master List: 0 items</div>
+        <div id="master-count" style="font-weight:bold; font-size:12px; color:#c20013;">Master List: 0 items</div>
         <div id="scan-status" style="font-size:10px; color:#666; margin: 5px 0;">Ready.</div>
         <div style="display:flex; gap:5px;">
-            <button class="mcgill-btn" style="background:#333;" id="btn-crawl">1a. CRAWL PDFs</button>
-            <button class="mcgill-btn" style="background:#007bff;" id="btn-events">1b. CRAWL CALENDAR</button>
+            <button class="mcgill-btn" style="background:#8e8e8e;" id="btn-crawl">Scan all PDFs</button>
+            <button class="mcgill-btn" style="background:#8e8e8e;" id="btn-events">Scan events</button>
         </div>
-        <button class="mcgill-btn" style="background:#6200ea;" id="btn-generate">2. GENERATE INSIGHTS & .ICS</button>
+        <button class="mcgill-btn" style="background:#c20013;" id="btn-generate">Analyze & Generate</button>
         <div class="section-title">Conflict Detection (Insights)</div>
         <div id="insights-container"><div class="insight-card">No crunch weeks detected yet.</div></div>
         <div class="section-title">Grade Calculator</div>
@@ -80,7 +83,7 @@ function buildDashboard() {
                 <tbody></tbody>
             </table>
         </div>
-        <button class="mcgill-btn" style="background:#f4f4f4; color:#666; font-size:9px;" id="btn-wipe">🗑️ WIPE ALL DATA</button>
+        <button class="mcgill-btn" style="background:#8e8e8e; font-size:9px;" id="btn-wipe">WIPE ALL DATA</button>
     `;
     document.body.appendChild(tool);
 
@@ -196,7 +199,7 @@ async function startAIWorkflow() {
                 const run = pollRes.data;
                 if (run.state === "DONE") {
                     clearInterval(poll);
-                    status.innerText = "✅ Analysis Complete!";
+                    status.innerText = "Analysis Complete!";
                     processAIResponse(run.outputs.output);
                 }
             });
