@@ -317,7 +317,7 @@ async function startAIWorkflow() {
     const data = await chrome.storage.local.get("masterList");
     const list = data.masterList || [];
     if (list.length === 0) return alert("Crawl at least one course first!");
-    status.innerHTML = `<div class="loader"></div> AI analyzing all courses...`;
+    status.innerHTML = `<div class="loader"></div> AI analyzing all events …`;
     const fullText = list.map(p => `[${p.course}] ${p.content}`).join("\n\n").substring(0, 140000);
     chrome.runtime.sendMessage({
         type: "GUMLOOP_PROXY",
@@ -391,17 +391,53 @@ function renderGradeCalculator(events) {
 
 function downloadICS(events) {
     let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Syllabuster//EN\n";
+
     events.forEach(e => {
-        const date = (e.date || "20250101").replace(/\D/g, "");
+        // 1. Clean the string to just numbers and T
+        let startRaw = (e.date || "20250101").replace(/[^0-9T]/g, "");
+        let endRaw = (e.end_date || "").replace(/[^0-9T]/g, "");
+
+        // 2. AI FIX: If it has 12+ digits but missing 'T' (e.g. 20250125140000), insert the T
+        if (!startRaw.includes("T") && startRaw.length >= 12) {
+            startRaw = startRaw.substring(0, 8) + "T" + startRaw.substring(8);
+        }
+        if (endRaw && !endRaw.includes("T") && endRaw.length >= 12) {
+            endRaw = endRaw.substring(0, 8) + "T" + endRaw.substring(8);
+        }
+
         const studyPlan = `\nStudy Recommendation: Begin review 7 days before. Focus on core concepts from ${e.course}.`;
+
         ics += "BEGIN:VEVENT\n";
         ics += `UID:${Date.now()}-${Math.random().toString(36).substring(2)}@syllabuster.com\n`;
-        ics += `DTSTART;VALUE=DATE:${date}\n`;
+
+        // 3. LOGIC: Determine if this is All Day or Specific Time
+        // It is "Specific Time" ONLY if it has a 'T' AND it is NOT Midnight (T000000)
+        const isSpecificTime = startRaw.includes("T") && !startRaw.includes("T000000");
+
+        if (isSpecificTime) {
+            // Specific Time (e.g. 2:00 PM)
+            ics += `DTSTART:${startRaw}\n`;
+
+            // If we have an end date, use it. Otherwise default to start time.
+            if (endRaw && endRaw.length > 8 && endRaw !== startRaw) {
+                ics += `DTEND:${endRaw}\n`;
+            } else {
+                ics += `DTEND:${startRaw}\n`;
+            }
+        } else {
+            // All Day Event (Use only the first 8 digits: YYYYMMDD)
+            // This creates the "Banner" effect in calendars
+            const dateOnly = startRaw.substring(0, 8);
+            ics += `DTSTART;VALUE=DATE:${dateOnly}\n`;
+        }
+
         ics += `SUMMARY:[${e.course || 'Course'}] ${e.title}\n`;
-        ics += `DESCRIPTION:Weight: ${e.weight || 'N/A'}.${studyPlan}\n`;
+        ics += `DESCRIPTION:Weight: ${e.weight || ''}.${studyPlan}\n`;
         ics += "END:VEVENT\n";
     });
+
     ics += "END:VCALENDAR";
+
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
