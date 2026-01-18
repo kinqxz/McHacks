@@ -128,12 +128,12 @@ function buildDashboard() {
                 <span style="cursor:pointer; font-weight:bold; color:#c20013;" id="close-buster">✕</span>
             </div>
             
-            <div id="master-count" style="font-weight:bold; font-size:12px; color:#c20013;">Event List: 0 items</div>
+<!--            <div id="master-count" style="font-weight:bold; font-size:12px; color:#c20013;">Event List: 0 items</div>-->
             <div id="scan-status" style="font-size:10px; color:#666; margin: 5px 0;">Ready to collect data ...</div>
             
             <div style="display:flex; gap:5px;">
-                <button class="mcgill-btn" style="background:#444;" id="btn-crawl">Scan PDFs</button>
-                <button class="mcgill-btn" style="background:#444;" id="btn-events">Scan Events</button>
+                <button class="mcgill-btn" style="background:#6c757d;" id="btn-crawl">Scan PDFs</button>
+                <button class="mcgill-btn" style="background:#6c757d;" id="btn-events">Scan Events</button>
                 <button class="mcgill-btn" style="background:#6c757d;" id="btn-upload">📂 Upload</button>
             </div>
             
