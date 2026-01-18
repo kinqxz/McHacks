@@ -34,7 +34,7 @@ async function updateMasterCount() {
         const data = await chrome.storage.local.get("masterList");
         const count = (data && data.masterList) ? data.masterList.length : 0;
         const el = document.getElementById('master-count');
-        if (el) el.innerText = `Master List: ${count} files`;
+        if (el) el.innerText = `Master List: ${count} items`;
     } catch(e) {}
 }
 
@@ -57,15 +57,17 @@ function buildDashboard() {
             <span>SYLLABUSTER 🚀</span>
             <span style="cursor:pointer;" id="close-buster">✕</span>
         </div>
-        <div id="master-count" style="font-weight:bold; font-size:13px; color:#ed1b2e;">Master List: 0 files</div>
+        <div id="master-count" style="font-weight:bold; font-size:13px; color:#ed1b2e;">Master List: 0 items</div>
         <div id="scan-status" style="font-size:11px; color:#666; margin: 10px 0;">Ready.</div>
-        <button class="mcgill-btn" style="background:#333;" id="btn-crawl">1. CRAWL PDFs</button>
+        <button class="mcgill-btn" style="background:#333;" id="btn-crawl">1a. CRAWL PDFs</button>
+        <button class="mcgill-btn" style="background:#007bff;" id="btn-events">1b. CRAWL CALENDAR</button>
         <button class="mcgill-btn" id="btn-append">2. APPEND TO MASTER</button>
         <button class="mcgill-btn" style="background:#6200ea;" id="btn-generate">3. GENERATE CALENDAR (.ics)</button>
         <button class="btn-wipe" id="btn-wipe">🗑️ WIPE DATA</button>
     `;
     document.body.appendChild(tool);
     document.getElementById('btn-crawl').onclick = crawlCourse;
+    document.getElementById('btn-events').onclick = crawlEvents;
     document.getElementById('btn-append').onclick = appendToMaster;
     document.getElementById('btn-generate').onclick = startAIWorkflow;
     document.getElementById('btn-wipe').onclick = clearMaster;
@@ -73,11 +75,13 @@ function buildDashboard() {
 
 // --- SCRAPING LOGIC ---
 let currentSessionFiles = [];
+
+// PDF CRAWLER
 async function crawlCourse() {
     const status = document.getElementById('scan-status');
     const orgUnitId = getOrgUnitId();
     if (!orgUnitId) return status.innerText = "Error: Navigate to a course!";
-    status.innerHTML = `<div class="loader"></div> Scraping MyCourses...`;
+    status.innerHTML = `<div class="loader"></div> Scraping PDFs...`;
     currentSessionFiles = [];
     try {
         const res = await fetch(`https://mycourses2.mcgill.ca/d2l/api/le/1.45/${orgUnitId}/content/toc`);
@@ -103,9 +107,44 @@ async function crawlCourse() {
             }
             currentSessionFiles.push({ course: document.title.split(' - ')[0], content: text, url: pdfs[i].Url });
         }
-        status.innerText = `Done. Found ${pdfs.length}. Click Append.`;
+        status.innerText = `Done. Found ${pdfs.length} PDFs. Click Append.`;
         document.getElementById('btn-append').style.display = "block";
     } catch (e) { status.innerText = "Crawl Error."; }
+}
+
+// CALENDAR EVENTS CRAWLER (New Feature)
+async function crawlEvents() {
+    const status = document.getElementById('scan-status');
+    const orgUnitId = getOrgUnitId();
+    if (!orgUnitId) return status.innerText = "Error: Navigate to a course!";
+    
+    status.innerHTML = `<div class="loader"></div> Scanning Calendar...`;
+    
+    // We fetch events for a wide range (Current date to 180 days in future)
+    const start = new Date().toISOString();
+    const end = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString();
+    
+    try {
+        const res = await fetch(`https://mycourses2.mcgill.ca/d2l/api/le/1.45/${orgUnitId}/calendar/events/?startDateTime=${start}&endDateTime=${end}`);
+        const events = await res.json();
+        
+        if (!Array.isArray(events)) throw new Error("Invalid response");
+
+        events.forEach(e => {
+            const eventText = `CALENDAR ITEM: ${e.Title} | Date: ${e.StartDateTime} | Description: ${e.DescriptionText || 'No description'}`;
+            currentSessionFiles.push({ 
+                course: document.title.split(' - ')[0], 
+                content: eventText, 
+                url: `calendar-event-${e.EventId}` 
+            });
+        });
+
+        status.innerText = `Done. Found ${events.length} events. Click Append.`;
+        document.getElementById('btn-append').style.display = "block";
+    } catch (e) {
+        console.error(e);
+        status.innerText = "Calendar Crawl Error.";
+    }
 }
 
 async function appendToMaster() {
@@ -120,7 +159,7 @@ async function appendToMaster() {
 }
 
 async function clearMaster() {
-    if (confirm("Delete all data?")) {
+    if (confirm("Delete all gathered data?")) {
         await chrome.storage.local.set({ "masterList": [] });
         await updateMasterCount();
         document.getElementById('scan-status').innerText = "Storage wiped.";
@@ -135,9 +174,9 @@ async function startAIWorkflow() {
     if (!list || list.length === 0) return alert("Scrape a course first!");
 
     status.innerHTML = `<div class="loader"></div> AI is processing...`;
+    // We send both PDF text and Calendar text to Gumloop
     const fullText = list.map(p => `[${p.course}] ${p.content}`).join("\n\n").substring(0, 140000);
 
-    // 1. Start Pipeline
     chrome.runtime.sendMessage({
         type: "GUMLOOP_PROXY",
         url: `https://api.gumloop.com/api/v1/start_pipeline?api_key=${GUMLOOP_API_KEY}&user_id=${GUMLOOP_USER_ID}&saved_item_id=${GUMLOOP_FLOW_ID}`,
@@ -151,9 +190,6 @@ async function startAIWorkflow() {
         }
 
         const runId = response.data.run_id;
-        console.log("Pipeline Started. Run ID:", runId);
-
-        // 2. Poll Result using your working URL
         const poll = setInterval(() => {
             if (!chrome.runtime?.id) { clearInterval(poll); return; }
 
@@ -163,23 +199,14 @@ async function startAIWorkflow() {
                 method: "GET",
                 headers: { "Authorization": `Bearer ${GUMLOOP_API_KEY}` }
             }, (pollRes) => {
-                if (!pollRes.success || !pollRes.data || pollRes.data.isHtmlError) {
-                    console.log("Polling...");
-                    return; 
-                }
+                if (!pollRes.success || !pollRes.data || pollRes.data.isHtmlError) return;
 
                 const run = pollRes.data;
-                console.log("AI State:", run.state);
-
                 if (run.state === "DONE") {
                     clearInterval(poll);
                     status.innerText = "✅ AI Done! Generating file...";
-                    
                     const rawOutput = run.outputs.output;
-                    console.log("Raw Output:", rawOutput);
-
                     try {
-                        // Strip markdown backticks if present
                         const cleanJson = typeof rawOutput === 'string' 
                             ? rawOutput.replace(/```json|```/g, "").trim() 
                             : JSON.stringify(rawOutput);
@@ -188,7 +215,6 @@ async function startAIWorkflow() {
                         downloadICS(events);
                         status.innerText = "✅ Calendar Saved!";
                     } catch (e) {
-                        console.error("JSON Parse Error:", e);
                         status.innerText = "❌ AI Format Error.";
                     }
                 } else if (run.state === "FAILED") {
@@ -201,19 +227,12 @@ async function startAIWorkflow() {
 }
 
 function downloadICS(events) {
-    if (!Array.isArray(events)) {
-        console.error("Expected array of events, got:", events);
-        return;
-    }
-    
+    if (!Array.isArray(events)) return;
     let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Syllabuster//EN\n";
-    
     events.forEach(e => {
-        // Basic cleanup of data from AI
         const title = (e.title || "Assessment").replace(/[,;]/g, "");
         const course = (e.course || "Course").replace(/[,;]/g, "");
         const weight = e.weight || "N/A";
-        // Ensure date is only digits (YYYYMMDD)
         const date = (e.date || "20250101").replace(/\D/g, "");
 
         ics += "BEGIN:VEVENT\n";
@@ -223,7 +242,6 @@ function downloadICS(events) {
         ics += `DESCRIPTION:Weight: ${weight}\n`;
         ics += "END:VEVENT\n";
     });
-    
     ics += "END:VCALENDAR";
 
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
