@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="ebc64169-fd55-4951-b388-d942bf420bc3" name="Changes" comment="New README.md" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;zazanono&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/kinqxz/McHacks.git&quot;,
+    &quot;accountId&quot;: &quot;6097f3a8-8b8c-4417-880c-4a8e717dcc7d&quot;
+  }
+}</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
+  <component name="ProjectId" id="38Q5VLv5vqcBVAFYqDmqGvgw8vL" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Node.js.content.js.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-b114ca120d71-intellij.indexing.shared.core-IU-242.21829.142" />
+        <option value="bundled-js-predefined-d6986cc7102b-7c0b70fcd90d-JavaScript-IU-242.21829.142" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="ebc64169-fd55-4951-b388-d942bf420bc3" name="Changes" comment="" />
+      <created>1768718978821</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1768718978821</updated>
+      <workItem from="1768718980292" duration="24417000" />
+    </task>
+    <task id="LOCAL-00001" summary="UI clean up, added logos/icons, fixed the color scheme">
+      <option name="closed" value="true" />
+      <created>1768721554888</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1768721554888</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Small UI changes">
+      <option name="closed" value="true" />
+      <created>1768722159885</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1768722159885</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Other small UI changes">
+      <option name="closed" value="true" />
+      <created>1768725374632</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1768725374632</updated>
+    </task>
+    <task id="LOCAL-00004" summary="User input + Small UI changes">
+      <option name="closed" value="true" />
+      <created>1768726663046</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1768726663046</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Gumloop API &amp; &#10;Prompt changes&#10;Working user inputs">
+      <option name="closed" value="true" />
+      <created>1768727449026</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1768727449027</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Properly outputs time and duration in the calendar">
+      <option name="closed" value="true" />
+      <created>1768729691644</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1768729691644</updated>
+    </task>
+    <task id="LOCAL-00007" summary="New Generate Button &amp; Outputs the next 14 days of events">
+      <option name="closed" value="true" />
+      <created>1768731480381</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1768731480381</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Bigger logo">
+      <option name="closed" value="true" />
+      <created>1768731764224</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1768731764224</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Time selector + UI effects + Fixed the weight problem for non evaluated things">
+      <option name="closed" value="true" />
+      <created>1768736032523</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1768736032523</updated>
+    </task>
+    <task id="LOCAL-00010" summary="UI tweaks">
+      <option name="closed" value="true" />
+      <created>1768737961181</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1768737961181</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Upload + Previews + UI tweaks">
+      <option name="closed" value="true" />
+      <created>1768741099766</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1768741099766</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Upload + Previews + UI tweaks">
+      <option name="closed" value="true" />
+      <created>1768741177076</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1768741177076</updated>
+    </task>
+    <task id="LOCAL-00013" summary="UI changes, removed grade thing">
+      <option name="closed" value="true" />
+      <created>1768742343736</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1768742343736</updated>
+    </task>
+    <task id="LOCAL-00014" summary="New README.md">
+      <option name="closed" value="true" />
+      <created>1768743451112</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1768743451112</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="COLUMN_ID_WIDTH">
+                <map>
+                  <entry key="Table.Default.Author.ColumnIdWidth" value="76" />
+                  <entry key="Table.Default.Date.ColumnIdWidth" value="107" />
+                  <entry key="Table.GitHub.CommitStatus.ColumnIdWidth" value="45" />
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="UI clean up, added logos/icons, fixed the color scheme" />
+    <MESSAGE value="Small UI changes" />
+    <MESSAGE value="Other small UI changes" />
+    <MESSAGE value="User input + Small UI changes" />
+    <MESSAGE value="Gumloop API &amp; &#10;Prompt changes&#10;Working user inputs" />
+    <MESSAGE value="Properly outputs time and duration in the calendar" />
+    <MESSAGE value="New Generate Button &amp; Outputs the next 14 days of events" />
+    <MESSAGE value="Bigger logo" />
+    <MESSAGE value="Time selector + UI effects + Fixed the weight problem for non evaluated things" />
+    <MESSAGE value="UI tweaks" />
+    <MESSAGE value="Upload + Previews + UI tweaks" />
+    <MESSAGE value="UI changes, removed grade thing" />
+    <MESSAGE value="New README.md" />
+    <option name="LAST_COMMIT_MESSAGE" value="New README.md" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/McHacks$testMyCourses.coverage" NAME="testMyCourses Coverage Results" MODIFIED="1768669760160" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+  </component>
+</project>
