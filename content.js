@@ -258,7 +258,6 @@ function buildDashboard() {
                     alert("Focus session complete! Take a break.");
                     document.getElementById('btn-pomo-toggle').innerText = "START";
                     isRunning = false;
-                    return;
                 }
             }, 1000);
             document.getElementById('btn-pomo-toggle').innerText = "PAUSE";
