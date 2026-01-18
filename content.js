@@ -110,6 +110,10 @@ function buildDashboard() {
         .calc-table td, .calc-table th { border: 1px solid #eee; padding: 4px; text-align: left; }
         .calc-input { width: 40px; border: 1px solid #ccc; font-size: 10px; border-radius:3px; padding:2px; text-align:center; }
         .calc-input:focus { border-color: #ed1b2e; outline:none; }
+
+        /* Personal Input Area */
+        .personal-area { width: 94%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 11px; resize: vertical; margin-bottom: 5px; outline: none; }
+        .personal-area:focus { border-color: #ed1b2e; }
         
         .loader { border: 2px solid #f3f3f3; border-top: 2px solid #ed1b2e; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -129,12 +133,24 @@ function buildDashboard() {
         <div id="scan-status" style="font-size:10px; color:#666; margin: 5px 0;">Ready.</div>
         
         <div style="display:flex; gap:5px;">
-            <button class="mcgill-btn" style="background:#6c757d;" id="btn-crawl">Scan all PDFs</button>
-            <button class="mcgill-btn" style="background:#6c757d;" id="btn-events">Scan events</button>
+            <button class="mcgill-btn" style="background:#444;" id="btn-crawl">Scan all PDFs</button>
+            <button class="mcgill-btn" style="background:#444;" id="btn-events">Scan events</button>
         </div>
         <button class="mcgill-btn" style="background:#ce1126; margin-top:10px;" id="btn-generate">Analyze & Generate</button>
         <button class="mcgill-btn" style="background:#fff; color:#999; border:1px solid #ccc; margin-top:15px; font-size:9px;" id="btn-wipe">WIPE ALL DATA</button>
         
+        <!-- Accordion 0: Personal Input -->
+        <div class="accordion-header" id="head-personal">
+            <span>Add Personal Events</span>
+            <span class="arrow-icon"></span>
+        </div>
+        <div class="accordion-content" id="cont-personal">
+            <div class="inner-pad">
+                <textarea id="personal-input" class="personal-area" rows="3" placeholder="Ex: 'Part-time work every Friday 2-6pm', 'Sister's wedding Oct 12', 'Unavailble Sunday mornings'."></textarea>
+                <button id="btn-add-personal" class="mcgill-btn" style="margin-top:0; background:#444;">+ Add to Master List</button>
+            </div>
+        </div>
+
         <!-- Accordion 1: Insights -->
         <div class="accordion-header" id="head-insights">
             <span>Conflict Detection (Insights)</span>
@@ -170,6 +186,29 @@ function buildDashboard() {
     document.getElementById('btn-wipe').onclick = clearMaster;
     document.getElementById('close-buster').onclick = () => tool.remove();
 
+    // Handler for Personal Input
+    document.getElementById('btn-add-personal').onclick = async () => {
+        const input = document.getElementById('personal-input');
+        const text = input.value.trim();
+        if (!text) return;
+
+        const newItem = {
+            course: "Personal",
+            content: `PERSONAL ENTRY: ${text}`,
+            url: `personal-${Date.now()}` // unique ID
+        };
+
+        await saveToMaster([newItem]);
+        await updateMasterCount();
+
+        // Visual feedback
+        input.value = "";
+        const btn = document.getElementById('btn-add-personal');
+        const oldText = btn.innerText;
+        btn.innerText = "Saved!";
+        setTimeout(() => btn.innerText = oldText, 1000);
+    };
+
     // SMOOTH ANIMATION LOGIC
     function toggleSection(headerId, contentId) {
         const header = document.getElementById(headerId);
@@ -195,6 +234,7 @@ function buildDashboard() {
         });
     }
 
+    toggleSection('head-personal', 'cont-personal');
     toggleSection('head-insights', 'cont-insights');
     toggleSection('head-calc', 'cont-calc');
 }
@@ -219,7 +259,7 @@ async function crawlCourse() {
         const res = await fetch(`https://mycourses2.mcgill.ca/d2l/api/le/1.45/${orgUnitId}/content/toc`);
         const data = await res.json();
         let pdfs = [];
-        const find = (m) => m.forEach(mod => { 
+        const find = (m) => m.forEach(mod => {
             if (mod.Topics) mod.Topics.forEach(t => { if (t.Url?.toLowerCase().endsWith('.pdf')) pdfs.push(t); });
             if (mod.Modules) find(mod.Modules);
         });
