@@ -54,20 +54,20 @@ function buildDashboard() {
     tool.id = 'syllabuster-tool';
     tool.innerHTML = `
         <div style="font-weight:bold; color:#ed1b2e; border-bottom: 2px solid #ed1b2e; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-            <span>SYLLABUSTER DEBUG 🚀</span>
+            <span>SYLLABUSTER 🚀</span>
             <span style="cursor:pointer;" id="close-buster">✕</span>
         </div>
         <div id="master-count" style="font-weight:bold; font-size:13px; color:#ed1b2e;">Master List: 0 files</div>
-        <div id="scan-status" style="font-size:11px; color:#666; margin: 10px 0;">Ready. Check console (F12) for logs.</div>
+        <div id="scan-status" style="font-size:11px; color:#666; margin: 10px 0;">Ready.</div>
         <button class="mcgill-btn" style="background:#333;" id="btn-crawl">1. CRAWL PDFs</button>
         <button class="mcgill-btn" id="btn-append">2. APPEND TO MASTER</button>
-        <button class="mcgill-btn" style="background:#6200ea;" id="btn-generate">3. SEND TO AI (LOG TEXT)</button>
+        <button class="mcgill-btn" style="background:#6200ea;" id="btn-generate">3. GENERATE CALENDAR (.ics)</button>
         <button class="btn-wipe" id="btn-wipe">🗑️ WIPE DATA</button>
     `;
     document.body.appendChild(tool);
     document.getElementById('btn-crawl').onclick = crawlCourse;
     document.getElementById('btn-append').onclick = appendToMaster;
-    document.getElementById('btn-generate').onclick = startAIDiagnostic;
+    document.getElementById('btn-generate').onclick = startAIWorkflow;
     document.getElementById('btn-wipe').onclick = clearMaster;
 }
 
@@ -127,45 +127,44 @@ async function clearMaster() {
     }
 }
 
-// --- UPDATED AI DIAGNOSTIC ---
-async function startAIDiagnostic() {
-    console.clear();
-    console.log("%c[SYLLABUSTER] Contacting Gumloop...", "color: #ed1b2e; font-weight: bold;");
+// --- AI WORKFLOW & ICS GENERATOR ---
+async function startAIWorkflow() {
     const status = document.getElementById('scan-status');
     const data = await chrome.storage.local.get("masterList");
     const list = data.masterList || [];
     if (!list || list.length === 0) return alert("Scrape a course first!");
 
-    status.innerHTML = `<div class="loader"></div> Starting AI Workflow...`;
+    status.innerHTML = `<div class="loader"></div> AI is processing...`;
     const fullText = list.map(p => `[${p.course}] ${p.content}`).join("\n\n").substring(0, 140000);
 
+    // 1. Start Pipeline
     chrome.runtime.sendMessage({
         type: "GUMLOOP_PROXY",
-        // Using the exact URL format you provided
         url: `https://api.gumloop.com/api/v1/start_pipeline?api_key=${GUMLOOP_API_KEY}&user_id=${GUMLOOP_USER_ID}&saved_item_id=${GUMLOOP_FLOW_ID}`,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lecture_data: fullText })
     }, (response) => {
         if (!response.success || response.data.isHtmlError) {
-            console.error("Pipeline Failed to Start:", response.data || response.error);
-            return status.innerText = "❌ Pipeline Start Failed. Check Console.";
+            console.error("Pipeline Failed:", response.error);
+            return status.innerText = "❌ AI Start Failed.";
         }
 
         const runId = response.data.run_id;
         console.log("Pipeline Started. Run ID:", runId);
 
+        // 2. Poll Result using your working URL
         const poll = setInterval(() => {
             if (!chrome.runtime?.id) { clearInterval(poll); return; }
 
             chrome.runtime.sendMessage({
                 type: "GUMLOOP_PROXY",
-                url: `https://api.gumloop.com/api/v1/get_pipeline_run?run_id=${runId}&user_id=${GUMLOOP_USER_ID}`,
+                url: `https://api.gumloop.com/api/v1/get_pl_run?run_id=${runId}&user_id=${GUMLOOP_USER_ID}`,
                 method: "GET",
                 headers: { "Authorization": `Bearer ${GUMLOOP_API_KEY}` }
             }, (pollRes) => {
                 if (!pollRes.success || !pollRes.data || pollRes.data.isHtmlError) {
-                    console.log("Polling failed or returned HTML. Waiting...");
+                    console.log("Polling...");
                     return; 
                 }
 
@@ -174,9 +173,24 @@ async function startAIDiagnostic() {
 
                 if (run.state === "DONE") {
                     clearInterval(poll);
-                    status.innerText = "✅ AI Done! See Console.";
-                    console.log("%c[AI RAW OUTPUT]:", "color: blue; font-weight: bold;");
-                    console.log(run.outputs.output);
+                    status.innerText = "✅ AI Done! Generating file...";
+                    
+                    const rawOutput = run.outputs.output;
+                    console.log("Raw Output:", rawOutput);
+
+                    try {
+                        // Strip markdown backticks if present
+                        const cleanJson = typeof rawOutput === 'string' 
+                            ? rawOutput.replace(/```json|```/g, "").trim() 
+                            : JSON.stringify(rawOutput);
+                        
+                        const events = JSON.parse(cleanJson);
+                        downloadICS(events);
+                        status.innerText = "✅ Calendar Saved!";
+                    } catch (e) {
+                        console.error("JSON Parse Error:", e);
+                        status.innerText = "❌ AI Format Error.";
+                    }
                 } else if (run.state === "FAILED") {
                     clearInterval(poll);
                     status.innerText = "❌ AI Workflow Failed.";
@@ -184,4 +198,40 @@ async function startAIDiagnostic() {
             });
         }, 4000);
     });
+}
+
+function downloadICS(events) {
+    if (!Array.isArray(events)) {
+        console.error("Expected array of events, got:", events);
+        return;
+    }
+    
+    let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Syllabuster//EN\n";
+    
+    events.forEach(e => {
+        // Basic cleanup of data from AI
+        const title = (e.title || "Assessment").replace(/[,;]/g, "");
+        const course = (e.course || "Course").replace(/[,;]/g, "");
+        const weight = e.weight || "N/A";
+        // Ensure date is only digits (YYYYMMDD)
+        const date = (e.date || "20250101").replace(/\D/g, "");
+
+        ics += "BEGIN:VEVENT\n";
+        ics += `UID:${Date.now()}-${Math.random().toString(36).substring(2)}@syllabuster.com\n`;
+        ics += `DTSTART;VALUE=DATE:${date}\n`;
+        ics += `SUMMARY:[${course}] ${title}\n`;
+        ics += `DESCRIPTION:Weight: ${weight}\n`;
+        ics += "END:VEVENT\n";
+    });
+    
+    ics += "END:VCALENDAR";
+
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = "McGill_Academic_Schedule.ics";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
