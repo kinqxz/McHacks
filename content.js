@@ -1,7 +1,9 @@
 // --- SYLLABUSTER CONFIGURATION ---
-const GUMLOOP_API_KEY = "1d8914111c3648c2ab7d0b9ea0472c7f";
-const GUMLOOP_USER_ID = "HA0VNm3y30Pi56n6AJTwr2v5Q292";
-const GUMLOOP_FLOW_ID = "5L6o4KqyhX5XDfy6hw4y5L";
+const GUMLOOP_API_KEY = "5c2d7adeeb5d4f08b697fd36638ebbda";
+const GUMLOOP_USER_ID = "f3LAKxUglWel0Pg6grvwGUX8vVh2";
+const GUMLOOP_FLOW_ID = "djjPMLFhsfhp82tWFGGVnE";
+
+// https://api.gumloop.com/api/v1/start_pipeline?api_key=5c2d7adeeb5d4f08b697fd36638ebbda&user_id=f3LAKxUglWel0Pg6grvwGUX8vVh2&saved_item_id=djjPMLFhsfhp82tWFGGVnE
 
 // --- INITIALIZATION ---
 if (window.self === window.top) {
