@@ -23,7 +23,7 @@ function initUI() {
             clearInterval(checkBody);
             buildDashboard();
             updateMasterCount();
-            loadCalculatedGrades();
+            // loadCalculatedGrades(); // REMOVED
         }
     }, 100);
 }
@@ -39,7 +39,7 @@ async function updateMasterCount() {
     const data = await chrome.storage.local.get("masterList");
     const count = (data && data.masterList) ? data.masterList.length : 0;
     const el = document.getElementById('master-count');
-    if (el) el.innerText = `Event List items saved`;
+    if (el) el.innerText = `Event List: ${count} items saved`;
 }
 
 // --- UI CONSTRUCTION ---
@@ -91,10 +91,7 @@ function buildDashboard() {
         .accordion-content.open { opacity: 1; }
         .inner-pad { padding-top: 10px; padding-bottom: 5px; }
         .insight-card { background: #fff5f5; border-left: 4px solid #c20013; padding: 8px; font-size: 11px; border-radius: 4px; color: #444; }
-        .calc-table { width: 100%; font-size: 10px; border-collapse: collapse; }
-        .calc-table td, .calc-table th { border: 1px solid #eee; padding: 4px; text-align: left; }
-        .calc-input { width: 40px; border: 1px solid #ccc; font-size: 10px; border-radius:3px; padding:2px; text-align:center; }
-        .calc-input:focus { border-color: #c20013; outline:none; }
+        
         .personal-area { width: 94%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 11px; resize: vertical; margin-bottom: 5px; outline: none; }
         .personal-area:focus { border-color: #c20013; }
         .loader { border: 2px solid #f3f3f3; border-top: 2px solid #c20013; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
@@ -106,9 +103,6 @@ function buildDashboard() {
         .preview-title { font-weight: bold; color: #333; }
         .preview-badge { background: #ffebeb; color: #c20013; padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: bold; }
         
-        #grade-result { text-align: right; margin-top: 10px; font-size: 11px; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
-        #grade-total-val { color: #c20013; font-weight: bold; font-size: 13px; }
-
         /* UTIL BUTTONS */
         .util-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .util-btn { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 8px; border-radius: 6px; font-size: 10px; cursor: pointer; text-align: center; transition: 0.2s; }
@@ -142,7 +136,7 @@ function buildDashboard() {
                 <select id="semester-select" class="time-select" style="flex:2; text-align:left; padding-left:10px;">
                     <option value="" disabled selected>Loading Semesters...</option>
                 </select>
-                <button id="btn-scan-batch" class="mcgill-btn" style="flex:1; margin-top:0; background:#333;">SCAN</button>
+                <button id="btn-scan-batch" class="mcgill-btn" style="flex:1; margin-top:0; background:#333;">Scan all</button>
             </div>
             <!-- --------------------- -->
 
@@ -162,6 +156,7 @@ function buildDashboard() {
                 <button id="btn-wipe" class="mcgill-btn" style="flex: 1;">WIPE ALL DATA</button>
             </div>
             
+            <!-- 1. PERSONAL INPUT -->
             <div class="accordion-header" id="head-personal">
                 <span>Add Personal Events</span>
                 <span class="arrow-icon"></span>
@@ -173,6 +168,7 @@ function buildDashboard() {
                 </div>
             </div>
 
+            <!-- 2. INSIGHTS -->
             <div class="accordion-header" id="head-insights">
                 <span>Conflict Detection (Insights)</span>
                 <span class="arrow-icon"></span>
@@ -181,22 +177,7 @@ function buildDashboard() {
                 <div id="insights-container" class="inner-pad"><div class="insight-card">No crunch weeks detected yet.</div></div>
             </div>
 
-            <div class="accordion-header" id="head-calc">
-                <span>Grade Calculator</span>
-                <span class="arrow-icon"></span>
-            </div>
-            <div class="accordion-content" id="cont-calc">
-                <div class="inner-pad">
-                    <div id="calculator-container" style="max-height:180px; overflow-y:auto;">
-                        <table class="calc-table" id="calc-table">
-                            <thead><tr><th>Assessment</th><th>Wgt%</th><th>Score%</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                    <div id="grade-result">Current Est. Average: <span id="grade-total-val">--%</span></div>
-                </div>
-            </div>
-
+            <!-- 3. FOCUS TIMER -->
             <div class="accordion-header" id="head-timer">
                 <span>Pomodoro Focus Timer</span>
                 <span class="arrow-icon"></span>
@@ -211,6 +192,7 @@ function buildDashboard() {
                 </div>
             </div>
             
+            <!-- 4. UPCOMING DEADLINES -->
             <div class="accordion-header" id="head-preview">
                 <span>Upcoming Events</span>
                 <span class="arrow-icon"></span>
@@ -221,6 +203,7 @@ function buildDashboard() {
                 </div>
             </div>
 
+            <!-- 5. UTILITIES -->
             <div class="accordion-header" id="head-utils">
                 <span>Smart Utilities</span>
                 <span class="arrow-icon"></span>
@@ -347,7 +330,6 @@ function buildDashboard() {
     toggleSection('head-preview', 'cont-preview');
     toggleSection('head-personal', 'cont-personal');
     toggleSection('head-insights', 'cont-insights');
-    toggleSection('head-calc', 'cont-calc');
     toggleSection('head-timer', 'cont-timer');
     toggleSection('head-utils', 'cont-utils');
 
@@ -679,7 +661,6 @@ async function processAIResponse(rawOutput) {
 
         await chrome.storage.local.set({ "lastGeneratedEvents": filteredEvents });
 
-        renderGradeCalculator(filteredEvents);
         renderSchedulePreview(filteredEvents);
         downloadICS(filteredEvents);
 
@@ -753,57 +734,8 @@ function renderSchedulePreview(events) {
 async function loadCalculatedGrades() {
     const data = await chrome.storage.local.get("lastGeneratedEvents");
     if (data.lastGeneratedEvents) {
-        renderGradeCalculator(data.lastGeneratedEvents);
         renderSchedulePreview(data.lastGeneratedEvents);
     }
-}
-
-// --- UPDATED GRADE CALCULATOR WITH DISPLAY ---
-function renderGradeCalculator(events) {
-    const tbody = document.querySelector('#calc-table tbody');
-    if (!tbody) return;
-    tbody.innerHTML = "";
-
-    // Only show items that have a weight defined
-    const gradedEvents = events.filter(e => parseFloat(e.weight) > 0);
-
-    gradedEvents.forEach((e) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${e.title}</td>
-            <td>${e.weight || 0}</td>
-            <td><input type="number" class="calc-input" data-weight="${parseFloat(e.weight) || 0}" placeholder="0"></td>
-        `;
-        tbody.appendChild(row);
-    });
-
-    // Recalculation Logic
-    const updateTotal = () => {
-        let weightedSum = 0;
-        let totalWeightSoFar = 0;
-
-        document.querySelectorAll('.calc-input').forEach(i => {
-            const w = parseFloat(i.dataset.weight);
-            const val = i.value.trim(); // Check if user actually typed something
-
-            if (val !== "") {
-                const score = parseFloat(val);
-                weightedSum += (score * w);
-                totalWeightSoFar += w;
-            }
-        });
-
-        // Calculate Average based on what has been graded so far
-        const average = totalWeightSoFar > 0 ? (weightedSum / totalWeightSoFar).toFixed(1) : "--";
-
-        // Update the new bottom display
-        const resEl = document.getElementById('grade-total-val');
-        if (resEl) resEl.innerText = `${average}%`;
-    };
-
-    document.querySelectorAll('.calc-input').forEach(input => {
-        input.oninput = updateTotal;
-    });
 }
 
 function downloadICS(events) {
@@ -856,6 +788,6 @@ chrome.runtime.onMessage.addListener((request) => {
     if (request.type === "REOPEN_UI") {
         buildDashboard();
         updateMasterCount();
-        loadCalculatedGrades();
+        // loadCalculatedGrades(); // REMOVED
     }
 });
