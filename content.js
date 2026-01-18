@@ -49,86 +49,67 @@ function buildDashboard() {
 
     const style = document.createElement('style');
     style.textContent = `
-        #syllabuster-tool { position: fixed; top: 20px; right: 20px; width: 340px; background: #fff; color: #333; border: 3px solid #c20013; border-radius: 12px; padding: 15px; z-index: 2147483647; font-family: 'Segoe UI', sans-serif; box-shadow: 0px 8px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
-        
+        /* 1. MAIN CONTAINER (The Glowing Gradient Shell) */
+        #syllabuster-tool { 
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            width: 340px; 
+            z-index: 2147483647; 
+            font-family: 'Segoe UI', sans-serif; 
+            
+            /* PADDING acts as the BORDER THICKNESS (4px) */
+            padding: 4px; 
+            border-radius: 16px; 
+            
+            /* The Animated Gradient */
+            background: linear-gradient(135deg, #c20013, #ff4d4d, #8a000d, #c20013);
+            background-size: 300% 300%;
+            animation: border-pulse 6s ease infinite;
+            
+            /* The "Pop" (Dual Shadows: One for depth, one for glow) */
+            box-shadow: 
+                0 5px 20px rgba(0,0,0,0.4),      /* Depth */
+                0 0 15px rgba(237, 27, 46, 0.6);  /* Red Glow */
+        }
+
+        @keyframes border-pulse {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 2. INNER CONTENT (The White Card & Scrolling) */
+        .tool-content {
+            background: #fff;
+            color: #333;
+            border-radius: 12px; /* Slightly smaller than parent */
+            padding: 15px;
+            
+            /* SCROLLING happens here now, so the glow is never clipped */
+            max-height: 85vh; 
+            overflow-y: auto; 
+        }
+
+        /* --- UI ELEMENTS --- */
         .mcgill-btn { background: #c20013; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 6px; margin-top: 8px; font-size: 11px; transition: 0.2s; }
         .mcgill-btn:hover { opacity: 0.8; }
         
-        /* --- AI BUTTON STYLING --- */
-        #btn-generate {
-            background: linear-gradient(45deg, #c20013 0%, #ff4d4d 100%);
-            color: white;
-            border: none;
-            padding: 12px;
-            width: 100%;
-            cursor: pointer;
-            font-weight: 700;
-            border-radius: 6px; 
-            margin-top: 20px;
-            font-size: 13px;
-            text-transform: none; 
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); 
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative;
-            overflow: hidden; /* Important for the speed bar */
-            animation: pulse-glow 3.5s infinite ease-in-out;
-        }
+        .controls-row { display: flex; gap: 5px; margin-top: 12px; align-items: center; }
 
-        #btn-generate:hover {
-            transform: translateY(-2px) scale(1.01);
-            box-shadow: 0 8px 25px rgba(194, 0, 19, 0.75), 0 0 10px rgba(255, 77, 77, 0.5);
-            filter: brightness(1.1);
-        }
+        .time-select { width: 100%; padding: 10px 25px 10px 10px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; font-size: 9px; font-weight: bold; text-transform: uppercase; color: #999; background-color: #fff; outline: none; cursor: pointer; text-align: center; text-align-last: center; transition: 0.2s; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23999999%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2082.2c3.6-3.6%205.4-7.8%205.4-12.8%200-5-1.8-9.3-5.4-12.9z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 10px center; background-size: 8px; }
+        .time-select:hover { border-color: #c20013; color: #c20013; }
 
-        /* --- THE ACTIVE PROCESSING EFFECT (Speed Bars) --- */
-        #btn-generate.processing {
-            pointer-events: none; /* Disable clicking while loading */
-            cursor: wait;
-            /* High Energy Static Glow */
-            box-shadow: 0 0 20px rgba(255, 77, 77, 0.8);
-            transform: scale(0.98);
-        }
+        #btn-wipe { margin-top: 0 !important; background: #fff; color: #999; border: 1px solid #ccc; font-size: 9px; }
+        #btn-wipe:hover { border-color: #c20013; color: #c20013; }
 
-        /* The Laser Beam / Speed Bar */
-        #btn-generate.processing::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: -150%;
-            width: 100%;
-            height: 100%;
-            
-            /* The Beam Gradient */
-            background: linear-gradient(
-                90deg,
-                transparent 0%,
-                rgba(255, 255, 255, 0.1) 20%,
-                rgba(255, 255, 255, 0.3) 35%,
-                rgba(255, 255, 255, 0.8) 50%,
-                rgba(255, 255, 255, 0.3) 65%,
-                rgba(255, 255, 255, 0.1) 80%,
-                transparent 100%
-            );
-            
-            /* Slant it for speed effect */
-            transform: skewX(-25deg);
-            
-            /* Loop the beam */
-            animation: speed-bar-anim 1.5s infinite linear;
-        }
-
-        @keyframes speed-bar-anim {
-            0% { left: -150%; }
-            100% { left: 150%; }
-        }
-
-        @keyframes pulse-glow {
-            0% { box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); }
-            50% { box-shadow: 0 0 25px rgba(194, 0, 19, 0.8), 0 0 12px rgba(255, 77, 77, 0.6); }
-            100% { box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); }
-        }
-        /* ----------------------------- */
+        #btn-generate { background: linear-gradient(45deg, #c20013 0%, #ff4d4d 100%); color: white; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: 700; border-radius: 6px; margin-top: 15px; font-size: 13px; text-transform: none; letter-spacing: 0.3px; box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; animation: pulse-glow 2.5s infinite ease-in-out; }
+        #btn-generate:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 8px 25px rgba(194, 0, 19, 0.75), 0 0 10px rgba(255, 77, 77, 0.5); filter: brightness(1.1); }
+        #btn-generate.processing { pointer-events: none; cursor: wait; box-shadow: 0 0 20px rgba(255, 77, 77, 0.8); transform: scale(0.98); }
+        #btn-generate.processing::after { content: ""; position: absolute; top: 0; left: -150%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 20%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0.1) 80%, transparent 100%); transform: skewX(-25deg); animation: speed-bar-anim 1s infinite linear; }
+        
+        @keyframes speed-bar-anim { 0% { left: -150%; } 100% { left: 150%; } }
+        @keyframes pulse-glow { 0% { box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); } 50% { box-shadow: 0 0 25px rgba(194, 0, 19, 0.8), 0 0 12px rgba(255, 77, 77, 0.6); } 100% { box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); } }
 
         .accordion-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 12px; color: #c20013; margin-top: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; user-select: none; }
         .arrow-icon { display: inline-block; width: 8px; height: 8px; border: solid #c20013; border-width: 0 2px 2px 0; transform-origin: 50% 50%; transform: rotate(135deg); transition: transform 0.3s ease; margin-right: 5px; }
@@ -151,54 +132,67 @@ function buildDashboard() {
     const tool = document.createElement('div');
     tool.id = 'syllabuster-tool';
 
+    // IMPORTANT: Wrapped content in "tool-content" div
     tool.innerHTML = `
-        <div style="border-bottom: 2px solid #c20013; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-             <img src="${logoUrl}" alt="Syllabuster Pro" style="max-height: 50px; max-width: 300px; padding: 5px; display: block;">
-            <span style="cursor:pointer; font-weight:bold; color:#c20013;" id="close-buster">✕</span>
-        </div>
-        
-        <div id="master-count" style="font-weight:bold; font-size:12px; color:#c20013;">Master List: 0 items</div>
-        <div id="scan-status" style="font-size:10px; color:#666; margin: 5px 0;">Ready.</div>
-        
-        <div style="display:flex; gap:5px;">
-            <button class="mcgill-btn" style="background:#444;" id="btn-crawl">Scan all PDFs</button>
-            <button class="mcgill-btn" style="background:#444;" id="btn-events">Scan events</button>
-        </div>
-        
-        <button id="btn-generate">✨ Analyze & Generate</button>
-        
-        <button class="mcgill-btn" style="background:#fff; color:#999; border:1px solid #ccc; margin-top:20px; font-size:9px;" id="btn-wipe">WIPE ALL DATA</button>
-        
-        <div class="accordion-header" id="head-personal">
-            <span>Add Personal Events</span>
-            <span class="arrow-icon"></span>
-        </div>
-        <div class="accordion-content" id="cont-personal">
-            <div class="inner-pad">
-                <textarea id="personal-input" class="personal-area" rows="3" placeholder="Ex: 'Part-time work every Friday 2-6pm'."></textarea>
-                <button id="btn-add-personal" class="mcgill-btn" style="margin-top:0; background:#444;">+ Add to Master List</button>
+        <div class="tool-content">
+            <div style="border-bottom: 2px solid #c20013; padding-bottom:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                 <img src="${logoUrl}" alt="Syllabuster Pro" style="max-height: 60px; max-width: 350px; display: block;">
+                <span style="cursor:pointer; font-weight:bold; color:#c20013;" id="close-buster">✕</span>
             </div>
-        </div>
+            
+            <div id="master-count" style="font-weight:bold; font-size:12px; color:#c20013;">Master List: 0 items</div>
+            <div id="scan-status" style="font-size:10px; color:#666; margin: 5px 0;">Ready.</div>
+            
+            <div style="display:flex; gap:5px;">
+                <button class="mcgill-btn" style="background:#444;" id="btn-crawl">Scan all PDFs</button>
+                <button class="mcgill-btn" style="background:#444;" id="btn-events">Scan events</button>
+            </div>
+            
+            <button id="btn-generate">✨ Analyze & Generate</button>
+            
+            <div class="controls-row">
+                <div style="flex: 1;">
+                    <select id="time-horizon" class="time-select">
+                        <option value="7">NEXT 7 DAYS</option>
+                        <option value="14">NEXT 14 DAYS</option>
+                        <option value="30">1 MONTH</option>
+                        <option value="120" selected>FULL SEMESTER</option>
+                    </select>
+                </div>
+                <button id="btn-wipe" class="mcgill-btn" style="flex: 1;">WIPE ALL DATA</button>
+            </div>
+            
+            <div class="accordion-header" id="head-personal">
+                <span>Add Personal Events</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="accordion-content" id="cont-personal">
+                <div class="inner-pad">
+                    <textarea id="personal-input" class="personal-area" rows="3" placeholder="Ex: 'Part-time work every Friday 2-6pm'."></textarea>
+                    <button id="btn-add-personal" class="mcgill-btn" style="margin-top:0; background:#444;">+ Add to Master List</button>
+                </div>
+            </div>
 
-        <div class="accordion-header" id="head-insights">
-            <span>Conflict Detection (Insights)</span>
-            <span class="arrow-icon"></span>
-        </div>
-        <div class="accordion-content" id="cont-insights">
-            <div id="insights-container" class="inner-pad"><div class="insight-card">No crunch weeks detected yet.</div></div>
-        </div>
+            <div class="accordion-header" id="head-insights">
+                <span>Conflict Detection (Insights)</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="accordion-content" id="cont-insights">
+                <div id="insights-container" class="inner-pad"><div class="insight-card">No crunch weeks detected yet.</div></div>
+            </div>
 
-        <div class="accordion-header" id="head-calc">
-            <span>Grade Calculator</span>
-            <span class="arrow-icon"></span>
-        </div>
-        <div class="accordion-content" id="cont-calc">
-            <div class="inner-pad">
-                <div id="calculator-container" style="max-height:180px; overflow-y:auto;">
-                    <table class="calc-table" id="calc-table">
-                        <thead><tr><th>Assessment</th><th>Wgt%</th><th>Score%</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
+            <div class="accordion-header" id="head-calc">
+                <span>Grade Calculator</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="accordion-content" id="cont-calc">
+                <div class="inner-pad">
+                    <div id="calculator-container" style="max-height:180px; overflow-y:auto;">
+                        <table class="calc-table" id="calc-table">
+                            <thead><tr><th>Assessment</th><th>Wgt%</th><th>Score%</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -253,6 +247,7 @@ function buildDashboard() {
     toggleSection('head-insights', 'cont-insights');
     toggleSection('head-calc', 'cont-calc');
 }
+
 
 async function saveToMaster(newItems) {
     const data = await chrome.storage.local.get("masterList");
@@ -441,7 +436,7 @@ function downloadICS(events) {
         let startRaw = (e.date || "20250101").replace(/[^0-9T]/g, "");
         let endRaw = (e.end_date || "").replace(/[^0-9T]/g, "");
 
-        // 2. AI FIX: If it has 12+ digits but missing 'T' (e.g. 20250125140000), insert the T
+        // 2. AI FIX: If it has 12+ digits but missing 'T', insert it
         if (!startRaw.includes("T") && startRaw.length >= 12) {
             startRaw = startRaw.substring(0, 8) + "T" + startRaw.substring(8);
         }
@@ -449,34 +444,35 @@ function downloadICS(events) {
             endRaw = endRaw.substring(0, 8) + "T" + endRaw.substring(8);
         }
 
+        // --- FIX STARTS HERE ---
+        // Only add the "Weight:" text if e.weight actually exists
+        const weightInfo = e.weight ? `Weight: ${e.weight}.` : "";
         const studyPlan = `\nStudy Recommendation: Begin review 7 days before. Focus on core concepts from ${e.course}.`;
+        // -----------------------
 
         ics += "BEGIN:VEVENT\n";
         ics += `UID:${Date.now()}-${Math.random().toString(36).substring(2)}@syllabuster.com\n`;
 
         // 3. LOGIC: Determine if this is All Day or Specific Time
-        // It is "Specific Time" ONLY if it has a 'T' AND it is NOT Midnight (T000000)
         const isSpecificTime = startRaw.includes("T") && !startRaw.includes("T000000");
 
         if (isSpecificTime) {
-            // Specific Time (e.g. 2:00 PM)
             ics += `DTSTART:${startRaw}\n`;
-
-            // If we have an end date, use it. Otherwise default to start time.
             if (endRaw && endRaw.length > 8 && endRaw !== startRaw) {
                 ics += `DTEND:${endRaw}\n`;
             } else {
                 ics += `DTEND:${startRaw}\n`;
             }
         } else {
-            // All Day Event (Use only the first 8 digits: YYYYMMDD)
-            // This creates the "Banner" effect in calendars
             const dateOnly = startRaw.substring(0, 8);
             ics += `DTSTART;VALUE=DATE:${dateOnly}\n`;
         }
 
         ics += `SUMMARY:[${e.course || 'Course'}] ${e.title}\n`;
-        ics += `DESCRIPTION:Weight: ${e.weight || ''}.${studyPlan}\n`;
+
+        // Use the conditional variable here
+        ics += `DESCRIPTION:${weightInfo}${studyPlan}\n`;
+
         ics += "END:VEVENT\n";
     });
 
