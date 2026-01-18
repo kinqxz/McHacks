@@ -45,79 +45,105 @@ async function updateMasterCount() {
 function buildDashboard() {
     if (document.getElementById('syllabuster-tool')) return;
 
-    // 1. Get Logo URL
     const logoUrl = chrome.runtime.getURL("syllabusterTitle.png");
 
     const style = document.createElement('style');
     style.textContent = `
-        #syllabuster-tool { position: fixed; top: 20px; right: 20px; width: 340px; background: #fff; color: #333; border: 3px solid #ed1b2e; border-radius: 12px; padding: 15px; z-index: 2147483647; font-family: 'Segoe UI', sans-serif; box-shadow: 0px 8px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
-        .mcgill-btn { background: #ed1b2e; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 6px; margin-top: 8px; font-size: 11px; transition: 0.2s; }
+        #syllabuster-tool { position: fixed; top: 20px; right: 20px; width: 340px; background: #fff; color: #333; border: 3px solid #c20013; border-radius: 12px; padding: 15px; z-index: 2147483647; font-family: 'Segoe UI', sans-serif; box-shadow: 0px 8px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+        
+        .mcgill-btn { background: #c20013; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 6px; margin-top: 8px; font-size: 11px; transition: 0.2s; }
         .mcgill-btn:hover { opacity: 0.8; }
         
-        /* Accordion Header */
-        .accordion-header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 12px; 
-            color: #ed1b2e; 
-            margin-top: 15px; 
-            padding-bottom: 5px; 
-            border-bottom: 1px solid #eee; 
-            user-select: none;
-        }
-        
-        /* Arrow Styling */
-        .arrow-icon {
-            display: inline-block;
-            width: 8px; 
-            height: 8px;
-            border: solid #ed1b2e;
-            border-width: 0 2px 2px 0;
-            /* Pivot exactly in the center */
-            transform-origin: 50% 50%;
-            transform: rotate(135deg); /* Pointing Down */
-            transition: transform 0.3s ease;
-            margin-right: 5px;
-        }
-        
-        .accordion-header.active .arrow-icon {
-            transform: rotate(45deg); /* Pointing Up */
-        }
-        
-        /* Accordion Wrapper - acts as the mask */
-        .accordion-content { 
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-            /* Smooth transition for both properties */
-            transition: max-height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
-        }
-        
-        .accordion-content.open {
-            opacity: 1;
-            /* No padding here to prevent snapping */
+        /* --- AI BUTTON STYLING --- */
+        #btn-generate {
+            background: linear-gradient(45deg, #c20013 0%, #ff4d4d 100%);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            cursor: pointer;
+            font-weight: 700;
+            border-radius: 6px; 
+            margin-top: 20px;
+            font-size: 13px;
+            text-transform: none; 
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); 
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden; /* Important for the speed bar */
+            animation: pulse-glow 3.5s infinite ease-in-out;
         }
 
-        /* Inner Padding Class - Keeps content spaced safely inside the mask */
-        .inner-pad {
-            padding-top: 10px;
-            padding-bottom: 5px;
+        #btn-generate:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 8px 25px rgba(194, 0, 19, 0.75), 0 0 10px rgba(255, 77, 77, 0.5);
+            filter: brightness(1.1);
         }
-        
-        .insight-card { background: #fff5f5; border-left: 4px solid #ed1b2e; padding: 8px; font-size: 11px; border-radius: 4px; color: #444; }
+
+        /* --- THE ACTIVE PROCESSING EFFECT (Speed Bars) --- */
+        #btn-generate.processing {
+            pointer-events: none; /* Disable clicking while loading */
+            cursor: wait;
+            /* High Energy Static Glow */
+            box-shadow: 0 0 20px rgba(255, 77, 77, 0.8);
+            transform: scale(0.98);
+        }
+
+        /* The Laser Beam / Speed Bar */
+        #btn-generate.processing::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -150%;
+            width: 100%;
+            height: 100%;
+            
+            /* The Beam Gradient */
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.1) 20%,
+                rgba(255, 255, 255, 0.3) 35%,
+                rgba(255, 255, 255, 0.8) 50%,
+                rgba(255, 255, 255, 0.3) 65%,
+                rgba(255, 255, 255, 0.1) 80%,
+                transparent 100%
+            );
+            
+            /* Slant it for speed effect */
+            transform: skewX(-25deg);
+            
+            /* Loop the beam */
+            animation: speed-bar-anim 1.5s infinite linear;
+        }
+
+        @keyframes speed-bar-anim {
+            0% { left: -150%; }
+            100% { left: 150%; }
+        }
+
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(194, 0, 19, 0.8), 0 0 12px rgba(255, 77, 77, 0.6); }
+            100% { box-shadow: 0 4px 15px rgba(194, 0, 19, 0.5); }
+        }
+        /* ----------------------------- */
+
+        .accordion-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 12px; color: #c20013; margin-top: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; user-select: none; }
+        .arrow-icon { display: inline-block; width: 8px; height: 8px; border: solid #c20013; border-width: 0 2px 2px 0; transform-origin: 50% 50%; transform: rotate(135deg); transition: transform 0.3s ease; margin-right: 5px; }
+        .accordion-header.active .arrow-icon { transform: rotate(45deg); }
+        .accordion-content { max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease; }
+        .accordion-content.open { opacity: 1; }
+        .inner-pad { padding-top: 10px; padding-bottom: 5px; }
+        .insight-card { background: #fff5f5; border-left: 4px solid #c20013; padding: 8px; font-size: 11px; border-radius: 4px; color: #444; }
         .calc-table { width: 100%; font-size: 10px; border-collapse: collapse; }
         .calc-table td, .calc-table th { border: 1px solid #eee; padding: 4px; text-align: left; }
         .calc-input { width: 40px; border: 1px solid #ccc; font-size: 10px; border-radius:3px; padding:2px; text-align:center; }
-        .calc-input:focus { border-color: #ed1b2e; outline:none; }
-
-        /* Personal Input Area */
+        .calc-input:focus { border-color: #c20013; outline:none; }
         .personal-area { width: 94%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 11px; resize: vertical; margin-bottom: 5px; outline: none; }
-        .personal-area:focus { border-color: #ed1b2e; }
-        
-        .loader { border: 2px solid #f3f3f3; border-top: 2px solid #ed1b2e; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
+        .personal-area:focus { border-color: #c20013; }
+        .loader { border: 2px solid #f3f3f3; border-top: 2px solid #c20013; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     `;
     document.head.appendChild(style);
@@ -126,44 +152,42 @@ function buildDashboard() {
     tool.id = 'syllabuster-tool';
 
     tool.innerHTML = `
-        <div style="border-bottom: 2px solid #ed1b2e; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="border-bottom: 2px solid #c20013; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
              <img src="${logoUrl}" alt="Syllabuster Pro" style="max-height: 40px; max-width: 250px; display: block;">
-            <span style="cursor:pointer; font-weight:bold; color:#ed1b2e;" id="close-buster">✕</span>
+            <span style="cursor:pointer; font-weight:bold; color:#c20013;" id="close-buster">✕</span>
         </div>
         
-        <div id="master-count" style="font-weight:bold; font-size:12px; color:#ed1b2e;">Master List: 0 items</div>
+        <div id="master-count" style="font-weight:bold; font-size:12px; color:#c20013;">Master List: 0 items</div>
         <div id="scan-status" style="font-size:10px; color:#666; margin: 5px 0;">Ready.</div>
         
         <div style="display:flex; gap:5px;">
             <button class="mcgill-btn" style="background:#444;" id="btn-crawl">Scan all PDFs</button>
             <button class="mcgill-btn" style="background:#444;" id="btn-events">Scan events</button>
         </div>
-        <button class="mcgill-btn" style="background:#ce1126; margin-top:10px;" id="btn-generate">Analyze & Generate</button>
-        <button class="mcgill-btn" style="background:#fff; color:#999; border:1px solid #ccc; margin-top:15px; font-size:9px;" id="btn-wipe">WIPE ALL DATA</button>
         
-        <!-- Accordion 0: Personal Input -->
+        <button id="btn-generate">✨ Analyze & Generate</button>
+        
+        <button class="mcgill-btn" style="background:#fff; color:#999; border:1px solid #ccc; margin-top:20px; font-size:9px;" id="btn-wipe">WIPE ALL DATA</button>
+        
         <div class="accordion-header" id="head-personal">
             <span>Add Personal Events</span>
             <span class="arrow-icon"></span>
         </div>
         <div class="accordion-content" id="cont-personal">
             <div class="inner-pad">
-                <textarea id="personal-input" class="personal-area" rows="3" placeholder="Ex: 'Part-time work every Friday 2-6pm', 'Sister's wedding Oct 12', 'Unavailble Sunday mornings'."></textarea>
+                <textarea id="personal-input" class="personal-area" rows="3" placeholder="Ex: 'Part-time work every Friday 2-6pm'."></textarea>
                 <button id="btn-add-personal" class="mcgill-btn" style="margin-top:0; background:#444;">+ Add to Master List</button>
             </div>
         </div>
 
-        <!-- Accordion 1: Insights -->
         <div class="accordion-header" id="head-insights">
             <span>Conflict Detection (Insights)</span>
             <span class="arrow-icon"></span>
         </div>
         <div class="accordion-content" id="cont-insights">
-            <!-- Inner div holds the padding so animation is smooth -->
             <div id="insights-container" class="inner-pad"><div class="insight-card">No crunch weeks detected yet.</div></div>
         </div>
 
-        <!-- Accordion 2: Calculator -->
         <div class="accordion-header" id="head-calc">
             <span>Grade Calculator</span>
             <span class="arrow-icon"></span>
@@ -178,7 +202,6 @@ function buildDashboard() {
                 </div>
             </div>
         </div>
-        
    `;
     document.body.appendChild(tool);
 
@@ -188,22 +211,17 @@ function buildDashboard() {
     document.getElementById('btn-wipe').onclick = clearMaster;
     document.getElementById('close-buster').onclick = () => tool.remove();
 
-    // Handler for Personal Input
     document.getElementById('btn-add-personal').onclick = async () => {
         const input = document.getElementById('personal-input');
         const text = input.value.trim();
         if (!text) return;
-
         const newItem = {
             course: "Personal",
             content: `PERSONAL ENTRY: ${text}`,
-            url: `personal-${Date.now()}` // unique ID
+            url: `personal-${Date.now()}`
         };
-
         await saveToMaster([newItem]);
         await updateMasterCount();
-
-        // Visual feedback
         input.value = "";
         const btn = document.getElementById('btn-add-personal');
         const oldText = btn.innerText;
@@ -211,24 +229,19 @@ function buildDashboard() {
         setTimeout(() => btn.innerText = oldText, 1000);
     };
 
-    // SMOOTH ANIMATION LOGIC
     function toggleSection(headerId, contentId) {
         const header = document.getElementById(headerId);
         const content = document.getElementById(contentId);
-
         header.addEventListener('click', () => {
             const isOpen = content.classList.contains('open');
-
             if (isOpen) {
-                // Closing: Freeze height at current pixels, then shrink
                 content.style.maxHeight = content.scrollHeight + "px";
                 requestAnimationFrame(() => {
-                    content.style.maxHeight = null; // Reverts to CSS (0)
+                    content.style.maxHeight = null;
                     content.classList.remove('open');
                     header.classList.remove('active');
                 });
             } else {
-                // Opening
                 content.classList.add('open');
                 header.classList.add('active');
                 content.style.maxHeight = content.scrollHeight + "px";
@@ -314,11 +327,29 @@ async function clearMaster() {
 
 async function startAIWorkflow() {
     const status = document.getElementById('scan-status');
+    const btn = document.getElementById('btn-generate'); // GET BUTTON
     const data = await chrome.storage.local.get("masterList");
     const list = data.masterList || [];
-    if (list.length === 0) return alert("Crawl at least one course first!");
-    status.innerHTML = `<div class="loader"></div> AI analyzing all events …`;
-    const fullText = list.map(p => `[${p.course}] ${p.content}`).join("\n\n").substring(0, 140000);
+
+    const personalInput = document.getElementById('personal-input');
+    let tempText = "";
+    if (personalInput && personalInput.value.trim() !== "") {
+        tempText = `\n\n[MY_SCHEDULE] MANDATORY SCHEDULE EVENT: ${personalInput.value.trim()}`;
+    }
+
+    if (list.length === 0 && tempText === "") return alert("Crawl at least one course first!");
+
+    // --- ENABLE LOADING EFFECT ---
+    status.innerHTML = `<div class="loader"></div> AI analyzing...`;
+    btn.classList.add("processing"); // Triggers CSS animation
+    const originalBtnText = btn.innerText;
+    btn.innerText = "✨ Processing...";
+    // -----------------------------
+
+    let fullText = list.map(p => `[${p.course}] ${p.content}`).join("\n\n");
+    fullText += tempText;
+    fullText = fullText.substring(0, 140000);
+
     chrome.runtime.sendMessage({
         type: "GUMLOOP_PROXY",
         url: `https://api.gumloop.com/api/v1/start_pipeline?api_key=${GUMLOOP_API_KEY}&user_id=${GUMLOOP_USER_ID}&saved_item_id=${GUMLOOP_FLOW_ID}`,
@@ -326,6 +357,13 @@ async function startAIWorkflow() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lecture_data: fullText })
     }, (response) => {
+        if (!response || !response.data) {
+            status.innerText = "Connection Error (Check API)";
+            // DISABLE LOADING EFFECT ON ERROR
+            btn.classList.remove("processing");
+            btn.innerText = originalBtnText;
+            return;
+        }
         const runId = response.data.run_id;
         const poll = setInterval(() => {
             chrome.runtime.sendMessage({
@@ -339,11 +377,17 @@ async function startAIWorkflow() {
                     clearInterval(poll);
                     status.innerText = "Analysis Complete!";
                     processAIResponse(run.outputs.output);
+
+                    // --- DISABLE LOADING EFFECT ON SUCCESS ---
+                    btn.classList.remove("processing");
+                    btn.innerText = originalBtnText;
+                    // ----------------------------------------
                 }
             });
         }, 4000);
     });
 }
+
 
 async function processAIResponse(rawOutput) {
     try {
