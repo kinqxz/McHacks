@@ -3,6 +3,9 @@ const GUMLOOP_API_KEY = "5c2d7adeeb5d4f08b697fd36638ebbda";
 const GUMLOOP_USER_ID = "f3LAKxUglWel0Pg6grvwGUX8vVh2";
 const GUMLOOP_FLOW_ID = "djjPMLFhsfhp82tWFGGVnE";
 
+// Global cache for courses to avoid double-fetching
+let CACHED_COURSES = [];
+
 // --- INITIALIZATION ---
 if (window.self === window.top) {
     initUI();
@@ -20,7 +23,7 @@ function initUI() {
             clearInterval(checkBody);
             buildDashboard();
             updateMasterCount();
-            // loadCalculatedGrades(); // REMOVED
+            loadCalculatedGrades();
         }
     }, 100);
 }
@@ -36,7 +39,7 @@ async function updateMasterCount() {
     const data = await chrome.storage.local.get("masterList");
     const count = (data && data.masterList) ? data.masterList.length : 0;
     const el = document.getElementById('master-count');
-    if (el) el.innerText = `Event List: ${count} items saved`;
+    if (el) el.innerText = `Event List items saved`;
 }
 
 // --- UI CONSTRUCTION ---
@@ -88,7 +91,10 @@ function buildDashboard() {
         .accordion-content.open { opacity: 1; }
         .inner-pad { padding-top: 10px; padding-bottom: 5px; }
         .insight-card { background: #fff5f5; border-left: 4px solid #c20013; padding: 8px; font-size: 11px; border-radius: 4px; color: #444; }
-        
+        .calc-table { width: 100%; font-size: 10px; border-collapse: collapse; }
+        .calc-table td, .calc-table th { border: 1px solid #eee; padding: 4px; text-align: left; }
+        .calc-input { width: 40px; border: 1px solid #ccc; font-size: 10px; border-radius:3px; padding:2px; text-align:center; }
+        .calc-input:focus { border-color: #c20013; outline:none; }
         .personal-area { width: 94%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 11px; resize: vertical; margin-bottom: 5px; outline: none; }
         .personal-area:focus { border-color: #c20013; }
         .loader { border: 2px solid #f3f3f3; border-top: 2px solid #c20013; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
@@ -100,6 +106,9 @@ function buildDashboard() {
         .preview-title { font-weight: bold; color: #333; }
         .preview-badge { background: #ffebeb; color: #c20013; padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: bold; }
         
+        #grade-result { text-align: right; margin-top: 10px; font-size: 11px; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
+        #grade-total-val { color: #c20013; font-weight: bold; font-size: 13px; }
+
         /* UTIL BUTTONS */
         .util-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .util-btn { background: #f8f9fa; border: 1px solid #ddd; color: #333; padding: 8px; border-radius: 6px; font-size: 10px; cursor: pointer; text-align: center; transition: 0.2s; }
@@ -127,6 +136,16 @@ function buildDashboard() {
                 <button class="mcgill-btn" style="background:#444;" id="btn-events">Scan Events</button>
                 <button class="mcgill-btn" style="background:#6c757d;" id="btn-upload">📂 Upload</button>
             </div>
+            
+            <!-- NEW SEMESTER SELECTOR -->
+            <div style="margin-top:5px; display:flex; gap:5px; align-items:center;">
+                <select id="semester-select" class="time-select" style="flex:2; text-align:left; padding-left:10px;">
+                    <option value="" disabled selected>Loading Semesters...</option>
+                </select>
+                <button id="btn-scan-batch" class="mcgill-btn" style="flex:1; margin-top:0; background:#333;">SCAN</button>
+            </div>
+            <!-- --------------------- -->
+
             <input type="file" id="manual-upload-input" accept=".pdf" style="display:none;" />
 
             <button id="btn-generate">✨ Analyze & Generate</button>
@@ -143,7 +162,6 @@ function buildDashboard() {
                 <button id="btn-wipe" class="mcgill-btn" style="flex: 1;">WIPE ALL DATA</button>
             </div>
             
-            <!-- 1. PERSONAL INPUT -->
             <div class="accordion-header" id="head-personal">
                 <span>Add Personal Events</span>
                 <span class="arrow-icon"></span>
@@ -155,7 +173,6 @@ function buildDashboard() {
                 </div>
             </div>
 
-            <!-- 2. INSIGHTS -->
             <div class="accordion-header" id="head-insights">
                 <span>Conflict Detection (Insights)</span>
                 <span class="arrow-icon"></span>
@@ -164,7 +181,22 @@ function buildDashboard() {
                 <div id="insights-container" class="inner-pad"><div class="insight-card">No crunch weeks detected yet.</div></div>
             </div>
 
-            <!-- 3. FOCUS TIMER -->
+            <div class="accordion-header" id="head-calc">
+                <span>Grade Calculator</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="accordion-content" id="cont-calc">
+                <div class="inner-pad">
+                    <div id="calculator-container" style="max-height:180px; overflow-y:auto;">
+                        <table class="calc-table" id="calc-table">
+                            <thead><tr><th>Assessment</th><th>Wgt%</th><th>Score%</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div id="grade-result">Current Est. Average: <span id="grade-total-val">--%</span></div>
+                </div>
+            </div>
+
             <div class="accordion-header" id="head-timer">
                 <span>Pomodoro Focus Timer</span>
                 <span class="arrow-icon"></span>
@@ -179,7 +211,6 @@ function buildDashboard() {
                 </div>
             </div>
             
-            <!-- 4. UPCOMING DEADLINES -->
             <div class="accordion-header" id="head-preview">
                 <span>Upcoming Events</span>
                 <span class="arrow-icon"></span>
@@ -190,7 +221,6 @@ function buildDashboard() {
                 </div>
             </div>
 
-            <!-- 5. UTILITIES -->
             <div class="accordion-header" id="head-utils">
                 <span>Smart Utilities</span>
                 <span class="arrow-icon"></span>
@@ -211,8 +241,13 @@ function buildDashboard() {
    `;
     document.body.appendChild(tool);
 
-    document.getElementById('btn-crawl').onclick = crawlCourse;
-    document.getElementById('btn-events').onclick = crawlEvents;
+    // Event Listeners
+    document.getElementById('btn-crawl').onclick = () => crawlCourse();
+    document.getElementById('btn-events').onclick = () => crawlEvents();
+
+    // NEW BATCH SCAN LISTENER
+    document.getElementById('btn-scan-batch').onclick = scanSelectedSemester;
+
     document.getElementById('btn-generate').onclick = startAIWorkflow;
     document.getElementById('btn-wipe').onclick = clearMaster;
     document.getElementById('close-buster').onclick = () => tool.remove();
@@ -234,16 +269,11 @@ function buildDashboard() {
         setTimeout(() => btn.innerText = oldText, 1000);
     };
 
-    // --- COPY CONTEXT LOGIC ---
+    // COPY CONTEXT LOGIC
     document.getElementById('btn-copy-context').onclick = async () => {
         const data = await chrome.storage.local.get("masterList");
         const list = data.masterList || [];
-
-        if (list.length === 0) {
-            alert("No data to copy. Scan some courses first!");
-            return;
-        }
-
+        if (list.length === 0) return alert("No data to copy. Scan some courses first!");
         const fullText = list.map(p => `[${p.course}] ${p.content}`).join("\n\n");
         navigator.clipboard.writeText(fullText).then(() => {
             const btn = document.getElementById('btn-copy-context');
@@ -253,7 +283,7 @@ function buildDashboard() {
         });
     };
 
-    // --- TIMER LOGIC ---
+    // TIMER LOGIC
     let timerInterval = null;
     let timeLeft = 25 * 60; // 25 minutes
     let isRunning = false;
@@ -293,7 +323,6 @@ function buildDashboard() {
         updateDisplay();
         document.getElementById('btn-pomo-toggle').innerText = "START";
     };
-    // -------------------
 
     function toggleSection(headerId, contentId) {
         const header = document.getElementById(headerId);
@@ -318,11 +347,114 @@ function buildDashboard() {
     toggleSection('head-preview', 'cont-preview');
     toggleSection('head-personal', 'cont-personal');
     toggleSection('head-insights', 'cont-insights');
+    toggleSection('head-calc', 'cont-calc');
     toggleSection('head-timer', 'cont-timer');
     toggleSection('head-utils', 'cont-utils');
+
+    // FETCH SEMESTERS FOR DROPDOWN
+    populateSemesterDropdown();
 }
 
-// --- LOGIC & HELPERS ---
+// --- NEW SEMESTER LOGIC ---
+
+async function populateSemesterDropdown() {
+    const dropdown = document.getElementById('semester-select');
+    if (!dropdown) return;
+
+    try {
+        const res = await fetch('/d2l/api/lp/1.43/enrollments/myenrollments/');
+        if (!res.ok) throw new Error("API Error");
+        const data = await res.json();
+
+        // Filter valid courses
+        CACHED_COURSES = data.Items.filter(item =>
+            item.OrgUnit.Type.Code == 'Course Offering' &&
+            item.Access.IsActive
+        );
+
+        if (CACHED_COURSES.length === 0) {
+            dropdown.innerHTML = `<option>No courses found</option>`;
+            return;
+        }
+
+        // Extract Semesters using Regex (e.g. Winter 2025, Fall 2024)
+        const semesterSet = new Set();
+        const semesterMap = {}; // Map semester name to count for better UI
+
+        CACHED_COURSES.forEach(c => {
+            const name = c.OrgUnit.Name;
+            // Matches: Winter 2025, Fall 2024, Summer 2026 (Case insensitive)
+            const match = name.match(/(Winter|Fall|Summer)\s+\d{4}/i);
+
+            let sem = match ? match[0] : "Other / Ongoing";
+            // Capitalize nicely
+            sem = sem.charAt(0).toUpperCase() + sem.slice(1);
+
+            semesterSet.add(sem);
+        });
+
+        // Populate Dropdown
+        dropdown.innerHTML = "";
+
+        // Sort semesters (Basic sort: Fall > Summer > Winter, reverse years)
+        // For hackathon simplicity, standard string sort or most recent first
+        const sortedSemesters = Array.from(semesterSet).sort().reverse();
+
+        sortedSemesters.forEach(sem => {
+            const opt = document.createElement('option');
+            opt.value = sem;
+            opt.innerText = sem;
+            dropdown.appendChild(opt);
+        });
+
+    } catch (e) {
+        console.error("Failed to load semesters", e);
+        dropdown.innerHTML = `<option>Error loading list</option>`;
+    }
+}
+
+async function scanSelectedSemester() {
+    const dropdown = document.getElementById('semester-select');
+    const selectedSem = dropdown.value;
+    const status = document.getElementById('scan-status');
+
+    if (!selectedSem || selectedSem.includes("Loading")) return alert("Please wait for semester list to load.");
+
+    // Filter courses by the selected semester string
+    const targetCourses = CACHED_COURSES.filter(c => {
+        if (selectedSem === "Other / Ongoing") {
+            return !c.OrgUnit.Name.match(/(Winter|Fall|Summer)\s+\d{4}/i);
+        }
+        return c.OrgUnit.Name.toLowerCase().includes(selectedSem.toLowerCase());
+    });
+
+    if (targetCourses.length === 0) return alert("No courses found for this selection.");
+
+    // Start Scanning
+    let totalPDFs = 0;
+    let totalEvents = 0;
+
+    for (let i = 0; i < targetCourses.length; i++) {
+        const c = targetCourses[i];
+        const name = c.OrgUnit.Name;
+        const id = c.OrgUnit.Id;
+
+        status.innerHTML = `<div class="loader"></div> Scanning (${i+1}/${targetCourses.length}): ${name.substring(0, 15)}...`;
+
+        const pdfCount = await crawlCourse(id, name);
+        const evtCount = await crawlEvents(id, name);
+
+        totalPDFs += pdfCount;
+        totalEvents += evtCount;
+
+        await new Promise(r => setTimeout(r, 300)); // Rate limit protection
+    }
+
+    status.innerText = `Batch Complete! Found ${totalPDFs} PDFs & ${totalEvents} Events.`;
+    updateMasterCount();
+}
+
+// --- EXISTING HELPERS ---
 
 async function saveToMaster(newItems) {
     const data = await chrome.storage.local.get("masterList");
@@ -338,10 +470,8 @@ async function saveToMaster(newItems) {
 async function handleManualUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-
     const status = document.getElementById('scan-status');
     status.innerHTML = `<div class="loader"></div> Reading PDF...`;
-
     try {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -351,13 +481,11 @@ async function handleManualUpload(e) {
             const content = await page.getTextContent();
             text += content.items.map(item => item.str).join(" ") + " ";
         }
-
         const newItem = {
             course: file.name.replace(".pdf", "").substring(0, 15),
             content: text,
             url: `manual-${Date.now()}`
         };
-
         await saveToMaster([newItem]);
         await updateMasterCount();
         status.innerText = "Manual PDF added successfully!";
@@ -367,13 +495,18 @@ async function handleManualUpload(e) {
     }
 }
 
-async function crawlCourse() {
+async function crawlCourse(manualId = null, manualName = null) {
     const status = document.getElementById('scan-status');
-    const orgUnitId = getOrgUnitId();
-    if (!orgUnitId) return status.innerText = "Error: Navigate to a course!";
-    status.innerHTML = `<div class="loader"></div> Scraping PDFs...`;
+    const orgUnitId = manualId || getOrgUnitId();
+    const courseName = manualName || document.title.split(' - ')[0];
+
+    if (!orgUnitId) return status.innerText = "Error: Navigate to a course or use Batch Scan.";
+
+    if (!manualId) status.innerHTML = `<div class="loader"></div> Scraping PDFs for ${courseName}...`;
+
     try {
         const res = await fetch(`https://mycourses2.mcgill.ca/d2l/api/le/1.45/${orgUnitId}/content/toc`);
+        if (!res.ok) throw new Error("API Error");
         const data = await res.json();
         let pdfs = [];
         const find = (m) => m.forEach(mod => {
@@ -381,45 +514,63 @@ async function crawlCourse() {
             if (mod.Modules) find(mod.Modules);
         });
         find(data.Modules);
+
         let scraped = [];
         for (let i = 0; i < pdfs.length; i++) {
-            status.innerHTML = `<div class="loader"></div> PDF ${i+1}/${pdfs.length}`;
-            const pdfRes = await fetch(`https://mycourses2.mcgill.ca${pdfs[i].Url}`);
-            const arrayBuffer = await pdfRes.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            let text = "";
-            for (let j = 1; j <= pdf.numPages; j++) {
-                const page = await pdf.getPage(j);
-                const content = await page.getTextContent();
-                text += content.items.map(item => item.str).join(" ") + " ";
-            }
-            scraped.push({ course: document.title.split(' - ')[0], content: text, url: pdfs[i].Url });
+            if(!manualId) status.innerHTML = `<div class="loader"></div> PDF ${i+1}/${pdfs.length}`;
+            try {
+                const pdfRes = await fetch(`https://mycourses2.mcgill.ca${pdfs[i].Url}`);
+                const arrayBuffer = await pdfRes.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let text = "";
+                for (let j = 1; j <= pdf.numPages; j++) {
+                    const page = await pdf.getPage(j);
+                    const content = await page.getTextContent();
+                    text += content.items.map(item => item.str).join(" ") + " ";
+                }
+                scraped.push({ course: courseName, content: text, url: pdfs[i].Url });
+            } catch(e) { console.log("Skipping PDF"); }
         }
         await saveToMaster(scraped);
-        status.innerText = `Successfully added ${scraped.length} PDFs to the list of events.`;
-        updateMasterCount();
-    } catch (e) { console.error(e); status.innerText = "Crawl Error (Check Console)."; }
+
+        if (!manualId) {
+            status.innerText = `Saved ${scraped.length} PDFs from ${courseName}.`;
+            updateMasterCount();
+        }
+        return scraped.length;
+    } catch (e) {
+        if(!manualId) status.innerText = "Crawl Error (Check Console).";
+        return 0;
+    }
 }
 
-async function crawlEvents() {
+async function crawlEvents(manualId = null, manualName = null) {
     const status = document.getElementById('scan-status');
-    const orgUnitId = getOrgUnitId();
-    if (!orgUnitId) return status.innerText = "Error: Navigate to a course!";
-    status.innerHTML = `<div class="loader"></div> Scanning Calendar...`;
+    const orgUnitId = manualId || getOrgUnitId();
+    const courseName = manualName || document.title.split(' - ')[0];
+
+    if (!orgUnitId) return status.innerText = "Error: Navigate to a course or use Batch Scan.";
+    if (!manualId) status.innerHTML = `<div class="loader"></div> Scanning Calendar...`;
+
     const start = new Date().toISOString();
     const end = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString();
     try {
         const res = await fetch(`https://mycourses2.mcgill.ca/d2l/api/le/1.45/${orgUnitId}/calendar/events/?startDateTime=${start}&endDateTime=${end}`);
+        if(!res.ok) throw new Error("Calendar API Error");
         const events = await res.json();
         let scraped = events.map(e => ({
-            course: document.title.split(' - ')[0],
+            course: courseName,
             content: `CALENDAR EVENT: ${e.Title} Date: ${e.StartDateTime}`,
             url: `evt-${e.EventId}`
         }));
         await saveToMaster(scraped);
-        status.innerText = `Added ${scraped.length} calendar items.`;
-        updateMasterCount();
-    } catch (e) { status.innerText = "Calendar Error."; }
+
+        if (!manualId) {
+            status.innerText = `Added ${scraped.length} events from ${courseName}.`;
+            updateMasterCount();
+        }
+        return scraped.length;
+    } catch (e) { return 0; }
 }
 
 async function clearMaster() {
@@ -528,6 +679,7 @@ async function processAIResponse(rawOutput) {
 
         await chrome.storage.local.set({ "lastGeneratedEvents": filteredEvents });
 
+        renderGradeCalculator(filteredEvents);
         renderSchedulePreview(filteredEvents);
         downloadICS(filteredEvents);
 
@@ -601,8 +753,57 @@ function renderSchedulePreview(events) {
 async function loadCalculatedGrades() {
     const data = await chrome.storage.local.get("lastGeneratedEvents");
     if (data.lastGeneratedEvents) {
+        renderGradeCalculator(data.lastGeneratedEvents);
         renderSchedulePreview(data.lastGeneratedEvents);
     }
+}
+
+// --- UPDATED GRADE CALCULATOR WITH DISPLAY ---
+function renderGradeCalculator(events) {
+    const tbody = document.querySelector('#calc-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    // Only show items that have a weight defined
+    const gradedEvents = events.filter(e => parseFloat(e.weight) > 0);
+
+    gradedEvents.forEach((e) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${e.title}</td>
+            <td>${e.weight || 0}</td>
+            <td><input type="number" class="calc-input" data-weight="${parseFloat(e.weight) || 0}" placeholder="0"></td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Recalculation Logic
+    const updateTotal = () => {
+        let weightedSum = 0;
+        let totalWeightSoFar = 0;
+
+        document.querySelectorAll('.calc-input').forEach(i => {
+            const w = parseFloat(i.dataset.weight);
+            const val = i.value.trim(); // Check if user actually typed something
+
+            if (val !== "") {
+                const score = parseFloat(val);
+                weightedSum += (score * w);
+                totalWeightSoFar += w;
+            }
+        });
+
+        // Calculate Average based on what has been graded so far
+        const average = totalWeightSoFar > 0 ? (weightedSum / totalWeightSoFar).toFixed(1) : "--";
+
+        // Update the new bottom display
+        const resEl = document.getElementById('grade-total-val');
+        if (resEl) resEl.innerText = `${average}%`;
+    };
+
+    document.querySelectorAll('.calc-input').forEach(input => {
+        input.oninput = updateTotal;
+    });
 }
 
 function downloadICS(events) {
@@ -655,6 +856,6 @@ chrome.runtime.onMessage.addListener((request) => {
     if (request.type === "REOPEN_UI") {
         buildDashboard();
         updateMasterCount();
-        // loadCalculatedGrades(); // REMOVED
+        loadCalculatedGrades();
     }
 });
